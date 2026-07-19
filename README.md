@@ -49,27 +49,35 @@ HTML5 the way browsers read it, minus the repairs that hide bugs:
   `<title>`, `<link>`, `<style>`, `<script>`, ...) written before any
   content collects into head, and explicit `<html>`/`<head>`/`<body>`
   tags contribute their attributes to the synthesized elements
+
 * **void elements** (`<br>`, `<img>`, `<meta>`, ...) — no close tag,
   `<br/>` tolerated and identical
+
 * **optional end tags**: the HTML5 auto-close table — `<li>` closes
   `<li>`, `<td>`/`<tr>` close each other, a block element closes
   `<p>`, `<option>`/`<optgroup>`, `<dt>`/`<dd>`, table sections,
   ruby annotations — and EOF closes everything (`<div>hi` is valid)
+
 * **case-insensitive names**, stored canonically lowercase;
   `get<"DIV">()`, `["Div"]` and `attribute<"ID">()` all hit
+
 * **attributes** double-quoted, single-quoted, unquoted (`width=100`)
   or bare boolean (`disabled`, reported as the empty string)
+
 * **`<!DOCTYPE html>`** accepted and skipped, any case, legacy strings
   included
+
 * **raw text**: `<script>`/`<style>` content is never parsed as markup
   (`if (a<b)`, `"</div>"` — fine); `<title>`/`<textarea>` are RCDATA
   (references decode); `<pre>`/`<textarea>` preserve whitespace, minus
   the single newline right after the open tag
+
 * **character references, never an error**: the full WHATWG named
   table (2125 references, two-code-point ones included), decimal and
   hex numeric references with the spec's windows-1252 remap and
   `U+FFFD` fallbacks — all decoded to UTF-8 at parse time; unknown
   names and bare `&` stay literal
+
 * `<!-- comments -->` (HTML rules: `--` inside is fine) and
   `<![CDATA[...]]>` sections are dropped; whitespace-only text between
   elements is dropped (except inside `<pre>`/`<textarea>`)
@@ -79,12 +87,17 @@ HTML5 the way browsers read it, minus the repairs that hide bugs:
 compile in is markup you control:
 
 * a stray end tag (`</p>` with no `<p>`, `</br>` at all)
+
 * a close tag crossing a still-open element (`<b><i>x</b></i>`,
   `<div><b>x</div>`)
+
 * a duplicate attribute name (case-insensitively)
+
 * self-closing syntax on a non-void element (`<div/>`)
+
 * a raw `<` in text (write `&lt;`), and a raw-text element that never
   reaches its close tag
+
 * elements nested deeper than 256 levels
 
 Not supported (yet): tag-omission rules that need more than the top of
