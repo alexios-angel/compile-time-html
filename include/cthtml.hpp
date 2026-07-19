@@ -9,6 +9,7 @@
 #include "cthtml/treebuild.hpp"
 #include "cthtml/serialize.hpp"
 #include "cthtml/views.hpp"
+#include "cthtml/value.hpp"
 
 // cthtml: compile-time HTML5.
 //

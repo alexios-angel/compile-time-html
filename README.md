@@ -170,6 +170,52 @@ out bare (`disabled`), other childless elements as `<div></div>`,
 `<script>`/`<style>` bodies pass through raw, and the result is
 null-terminated.
 
+## Parse a runtime string
+
+`parse<Src>()` needs its source as a template argument. Its sibling
+`parse(std::string_view)` takes the source as a *value* — for HTML known
+only at runtime (a file, a socket, a form field) — and runs the
+**identical** HTML5 tree construction over an owned
+`std::string`/`std::vector` tree:
+
+```c++
+std::string_view html = load_page();       // known only at runtime
+cthtml::document d = cthtml::parse(html);
+
+if (!d.ok()) {                             // a mistake is a value here,
+    log(cthtml::to_string(d.error()));     // not a compile error
+    return;
+}
+d.body()["ul"].count("li");
+for (cthtml::node a : d.query_all("#nav > li > a")) { visit(a.attribute("href")); }
+```
+
+Because `std::string`/`std::vector` are `constexpr` on this toolchain,
+the very same function also folds inside a constant expression — one
+engine, both worlds:
+
+```c++
+static_assert(cthtml::parse("<p>hi</p>").body().text() == "hi");
+static_assert(cthtml::parse("<ul><li>a<li>b</ul>").body()["ul"].count("li") == 2);
+```
+
+The result is byte-for-byte what `parse<Src>()` produces (a differential
+suite serializes both ways and compares) — implied `html > (head,
+body)`, void elements, optional end tags, raw-text/RCDATA elements and
+character references all included. The only difference is surface: an
+author mistake that makes `parse<Src>()` a compile error instead leaves
+`document::ok() == false` with the reason on `error()`.
+
+| Type | Accessors |
+|------|-----------|
+| `document` | `ok()`, `error()` / `error_where()`, `root()`, `head()`, `body()`, `title()`, `query()` / `query_all()`, `get_element_by_id()` |
+| `node` (a handle) | `name()`, `text()`, `type()`, `["tag"]` / `[i]`, `count()` / `contains()`, `attribute()` / `has_attribute()` / `attributes()`, `parent()`, `child_count()`, range-for over children, `query()` / `query_all()` |
+
+Selectors are a CSS subset: tag, `#id`, `.class`, `[attr]`,
+`[attr=value]`, `*`, with descendant (space) and child (`>`)
+combinators. `serialize(node)` / `serialize(document)` render an owned
+`std::string` by the same rules as the type-level `serialize`.
+
 ## Debugging
 
 When `is_valid` says `false`, the reason is one query away, computed at

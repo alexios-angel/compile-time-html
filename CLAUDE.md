@@ -33,8 +33,9 @@ result. gcc uses `include/cthtml.hpp.gch`; clang uses `cthtml.pch` (`-include-pc
 - `include/cthtml/types.hpp` — `element` / `text` node types, `kind` enum, accessors, case-insensitive matching (`ascii_iequals`, `is_void_tag`).
 - `include/cthtml/views.hpp` — `node_view` / `attribute_view` (uniform runtime views for `operator[]`, iteration).
 - `include/cthtml/serialize.hpp` — `serialize()` back to minified HTML (voids bare, boolean attrs bare, raw script/style bodies unescaped).
+- `include/cthtml/value.hpp` — the **VALUE parser**: `cthtml::parse(std::string_view) -> cthtml::document`, an owned `std::string`/`std::vector` DOM (`document` + `node` handle + `dom_node`/`dom_attribute`). A hand-written tokenizer + a value port of `treebuild.hpp`'s validator and `tb_*` insertion (REUSING the classification helpers verbatim), so it reproduces `parse<Src>()` byte-for-byte (a differential suite serializes both ways and compares). Runs on runtime-only strings AND folds in a `static_assert` (constexpr `std::string`/`std::vector`). Adds a CSS-subset selector engine (`query`/`query_all`/`get_element_by_id`; tag/`#id`/`.class`/`[attr]`/`*`, descendant + `>`), and `serialize(node)`/`serialize(document)` (owned `std::string`). A mistake is a value here (`ok()`/`error()`), not a compile error.
 - `external/compile-time-lark/` — git SUBMODULE providing ctlark + ctll (see GOTCHAS).
-- `tests/` (`document.cpp` — a real page, `html5.cpp` — the feature matrix, `cxx17.cpp`), `examples/` (`page`, `wellformed`, `introspection`, `iteration`), `single-header/cthtml.hpp`, `cthtml.cppm` (module, `import std`).
+- `tests/` (`document.cpp` — a real page, `html5.cpp` — the feature matrix, `value.cpp` — the value parser: differential vs `parse<Src>()` + navigation/selectors, `cxx17.cpp`), `examples/` (`page`, `wellformed`, `introspection`, `iteration`), `single-header/cthtml.hpp`, `cthtml.cppm` (module, `import std`).
 
 ## Public API (all `template <fixed_string input>`)
 - `cthtml::is_valid<input>` — `bool`, never a compile error.
@@ -42,6 +43,7 @@ result. gcc uses `include/cthtml.hpp.gch`; clang uses `cthtml.pch` (`-include-pc
 - `cthtml::error_info<input>()` / `error_message<input>()` — syntax failure location + expected tokens (rendered caret).
 - `cthtml::bind_error<input>()` — why a document that PARSES is rejected: `bind_reason::{stray_end_tag, mismatched_tag, duplicate_attribute, self_closing_non_void, depth_overflow}` (defined in `bind.hpp`), plus `.where`.
 - `cthtml::serialize(...)`, `cthtml::for_each_child`, `cthtml::for_each_attribute`, `attributes(...)`.
+- **RUNTIME/value entry (not a template):** `cthtml::parse(std::string_view) -> cthtml::document` (`value.hpp`) — same tree construction over an owned tree; `document::{ok, error, root, head, body, title, query, query_all, get_element_by_id}`, `node::{name, text, [tag]/[i], count, attribute, parent, query, ...}`, plus `serialize(node)`. Needs C++20+ constexpr containers (the family is C++23; see the ct-family memory).
 - `cthtml::debug::{traced_parse, parse_runtime, dump_tokens, dump_grammar}` — ctlark toolbox with the HTML grammar baked in.
 - Diagnostics macros: `CTLARK_VERBOSE_ERRORS`, `CTLARK_DEBUG`, `CTLARK_CONSTEXPR_ASSERT`.
 

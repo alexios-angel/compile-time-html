@@ -2,12 +2,20 @@
 
 default: all
 
-CXX_STANDARD := 20
+CXX_STANDARD := 23
 
 PYTHON := python3
 
+# THE compiler: the stack's std::embed clang (see compile-time-browser
+# tools/clang-std-embed or the embed repo's release); plain clang++ as
+# a fallback for standalone checkouts. gcc paths are gone (clang-only).
+ifeq ($(origin CXX),default)
+CTB_CLANG := $(wildcard ../../tools/clang-std-embed/bin/clang++)
+CXX := $(if $(CTB_CLANG),$(CTB_CLANG),clang++)
+endif
+CXX_IS_CLANG := yes
+
 # Earley at compile time needs more constexpr budget than the defaults
-CXX_IS_CLANG := $(shell $(CXX) --version 2>/dev/null | grep -qi clang && echo yes)
 ifeq ($(CXX_IS_CLANG),yes)
 CONSTEXPR_FLAGS := -fconstexpr-steps=500000000 -fconstexpr-depth=1024 -fbracket-depth=2048
 else
@@ -47,7 +55,7 @@ $(OBJECTS): %.o: %.cpp $(PCH)
 
 pch: $(PCH)
 
-$(PCH): include/cthtml.hpp
+$(PCH): include/cthtml.hpp $(wildcard include/cthtml/*.hpp)
 	$(CXX) $(CXXFLAGS) -x c++-header $< -o $@
 
 -include $(DEPENDENCY_FILES)
