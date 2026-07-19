@@ -67,10 +67,10 @@ HTML5 the way browsers read it, minus the repairs that hide bugs:
 * **`<!DOCTYPE html>`** accepted and skipped, any case, legacy strings
   included
 
-* **raw text**: `<script>`/`<style>` content is never parsed as markup
-  (`if (a<b)`, `"</div>"` — fine); `<title>`/`<textarea>` are RCDATA
-  (references decode); `<pre>`/`<textarea>` preserve whitespace, minus
-  the single newline right after the open tag
+* **raw text**:
+  - `<script>`/`<style>` content is never parsed as markup (`if (a<b)`, `"</div>"` — fine)
+  - `<title>`/`<textarea>` are RCDATA (references decode)
+  - `<pre>`/`<textarea>` preserve whitespace, minus the single newline right after the open tag
 
 * **character references, never an error**: the full WHATWG named
   table (2125 references, two-code-point ones included), decimal and
