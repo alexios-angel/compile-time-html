@@ -26,44 +26,8 @@
 // unrecognized - a bare &, an unknown &name;, a reference without its
 // semicolon - stays literal.
 
-namespace cthtml {
-
-// why tree construction rejected a document that PARSES - the author
-// mistakes cthtml refuses to repair (HTML5 conveniences - omitted end
-// tags, void elements, implied html/head/body - are not errors)
-CTLL_EXPORT enum class bind_reason : unsigned char {
-	none,
-	stray_end_tag,         // a close tag with no matching open element
-	mismatched_tag,        // a close tag crossing a still-open element
-	duplicate_attribute,   // the same attribute name twice in one tag
-	self_closing_non_void, // <div/> - only void elements may self-close
-	depth_overflow         // more than 256 nested open elements
-};
-
-CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
-	switch (r) {
-		case bind_reason::none: return "none";
-		case bind_reason::stray_end_tag: return "a close tag with no matching open element";
-		case bind_reason::mismatched_tag: return "a close tag crossing a still-open element";
-		case bind_reason::duplicate_attribute: return "duplicate attribute name in a tag";
-		case bind_reason::self_closing_non_void: return "self-closing syntax on a non-void element";
-		case bind_reason::depth_overflow: return "more than 256 nested open elements";
-	}
-	return "unknown";
-}
-
-// the first tree-construction failure: which rule broke, and the raw
-// offending token as written in the input
-CTLL_EXPORT struct bind_error_t {
-	bind_reason reason = bind_reason::none;
-	std::string_view where{};
-
-	constexpr bool ok() const noexcept {
-		return reason == bind_reason::none;
-	}
-};
-
-} // namespace cthtml
+// bind_reason / to_string / bind_error_t now live in types.hpp (grammar-free;
+// both the TYPE builder and the runtime VALUE parser report through them).
 
 namespace cthtml::detail {
 
@@ -80,29 +44,11 @@ using bt_CLOSE = ctlark::text<'C', 'L', 'O', 'S', 'E'>;
 using bt_DQVAL = ctlark::text<'D', 'Q', 'V', 'A', 'L'>;
 using bt_SQVAL = ctlark::text<'S', 'Q', 'V', 'A', 'L'>;
 
-// HTML "ASCII whitespace": space, tab, LF, FF, CR
-constexpr bool is_html_blank(char c) noexcept {
-	return c == ' ' || c == '\x09' || c == '\x0A' || c == '\x0C' || c == '\x0D';
-}
+// is_html_blank / ascii_lower / ascii_iequals live in types.hpp (grammar-free;
+// the value path and the lookup side need them too)
 
-// ascii_lower / ascii_iequals live in types.hpp (the lookup side needs
-// them too)
-
-constexpr int bind_hexval(char c) noexcept {
-	if (c >= '0' && c <= '9') { return c - '0'; }
-	if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
-	return c - 'A' + 10;
-}
-
-constexpr bool is_ascii_digit(char c) noexcept {
-	return c >= '0' && c <= '9';
-}
-constexpr bool is_ascii_hex(char c) noexcept {
-	return is_ascii_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-constexpr bool is_ascii_alnum(char c) noexcept {
-	return is_ascii_digit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
+// bind_hexval / is_ascii_digit / is_ascii_hex / is_ascii_alnum now live in
+// types.hpp (grammar-free; the value path's char-reference decoder needs them).
 
 // --- decoding character references in a span (From, To are the number
 // of characters to strip from either end: quotes for attribute values).

@@ -1,11 +1,19 @@
 #ifndef CTHTML__HPP
 #define CTHTML__HPP
 
+// CTHTML_NO_GRAMMAR: skip the lark/Earley HTML grammar and the type-path tree
+// builder - needed only by the compile-time TYPE path (parse<>()/is_valid<>). A
+// TU that uses only the runtime VALUE path (cthtml::parse(std::string_view))
+// defines CTHTML_NO_GRAMMAR and skips the grammar table build. (Twins: ctjs/ctcss.)
 #include "ctlark.hpp"
+#ifndef CTHTML_NO_GRAMMAR
 #include "cthtml/grammar.hpp"
+#endif
 #include "cthtml/types.hpp"
 #include "cthtml/entities.hpp"
+#ifndef CTHTML_NO_GRAMMAR
 #include "cthtml/bind.hpp"
+#endif
 #include "cthtml/treebuild.hpp"
 #include "cthtml/serialize.hpp"
 #include "cthtml/views.hpp"
@@ -51,6 +59,11 @@ namespace cthtml {
 // C++17: pass a constexpr ctll::fixed_string variable with linkage
 #define CTHTML_STRING_INPUT const auto &
 #endif
+
+// The grammar-backed compile-time TYPE path. The runtime VALUE path
+// (cthtml::parse(std::string_view) -> document, in value.hpp) is available
+// either way.
+#ifndef CTHTML_NO_GRAMMAR
 
 namespace detail {
 
@@ -138,6 +151,8 @@ ctlark::debug::runtime_result parse_runtime(std::string_view in) {
 }
 
 } // namespace debug
+
+#endif // CTHTML_NO_GRAMMAR
 
 } // namespace cthtml
 
