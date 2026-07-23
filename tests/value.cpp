@@ -3,58 +3,55 @@
 void empty_symbol_value() { }
 
 // The value parser (cthtml::parse(std::string_view) -> cthtml::document)
-// runs the SAME HTML5 tree construction as the type-level parse<Src>(),
-// over an owned std::string/std::vector tree. Because those are
-// constexpr on this toolchain, every check below is a static_assert -
-// the parser folds entirely at compile time - and the same calls work
-// on a runtime std::string_view (see runtime_demo at the end).
-
-#if CTLL_CNTTP_COMPILER_CHECK
+// runs HTML5 tree construction over an owned std::string/std::vector
+// tree. Because those are constexpr, every check below is a
+// static_assert - the parser folds entirely at compile time - and the
+// same calls work on a runtime std::string_view (see runtime_demo).
 
 #include <string>
 #include <string_view>
 using namespace std::literals;
 
-// ============ differential: parse(sv) matches parse<Src>() ============
-// serialize both ways and require byte-identical output. This pins the
-// value parser to the type parser across every HTML5 convenience.
+// ============ frozen differential: parse(sv) vs the retired type parser ============
+// The last build of the type-level parse<Src>() produced these exact
+// serializations; the value parser must keep reproducing them
+// byte-for-byte. (Frozen 2026-07-23 when the grammar path was removed.)
 
-#define SAME(str)                                                                        \
-	static_assert(cthtml::serialize(cthtml::parse<str>()) ==                             \
-	              cthtml::serialize(cthtml::parse(std::string_view{str})))
+#define SAME(str, expect)                                                                \
+	static_assert(cthtml::serialize(cthtml::parse(std::string_view{str})) == (expect))
 
-SAME("<p>hi");
-SAME("<br>");
-SAME("");
-SAME("   \n  ");
-SAME("<p>fragments are fine");
-SAME("<div><p>EOF closes everything");
-SAME("<ul id=nav><li>Docs<li>Code</ul>");
-SAME("<ul><li>a<li>b<li>c</ul>");
-SAME("<p>one<p>two<p>three");
-SAME("<dl><dt>term<dd>def<dt>t2<dd>d2</dl>");
-SAME("<table><tr><td>a<td>b<tr><td>c<td>d</table>");
-SAME("<table><thead><tr><th>H<tbody><tr><td>x</table>");
-SAME("<select><option>a<option>b</select>");
-SAME("<!DOCTYPE html><title>t</title>");
-SAME("<!-- comment --><p>after");
-SAME("<html lang=en><head><meta charset=utf-8><title>T</title></head><body><p>x</body></html>");
-SAME("<meta charset=utf-8><link rel=stylesheet href=/a.css><p>body starts here");
-SAME("<style>p em{color:#333}</style><p>x");
-SAME(R"(<script type=module>if(a<b){go("</div>")}</script><p>x)");
-SAME("<title>Demo &amp; Docs &mdash; v2</title>");
-SAME("<textarea>\nline1\nline2</textarea>");
-SAME("<p>a &amp; b &lt; c &#65; &#x42;</p>");
-SAME("<input type=text disabled required>");
-SAME("<a href='/x' title=\"q&amp;a\">link</a>");
-SAME("<DIV CLASS=Big><P>Mixed CASE</P></DIV>");
-SAME("<pre>  spaced\n  text  </pre>");
-SAME("<div><span>a</span> <span>b</span></div>");
-SAME("<p>x</p>\n\n<p>y</p>");
-SAME("<section><h1>t</h1><p>para<ul><li>i</ul></section>");
-SAME("<b><i>nested</i></b>");
-SAME("<img src=a.png alt='an image'><br><hr>");
-SAME("<custom-element data-x=1><child></child></custom-element>");
+SAME("<p>hi", "<html><head></head><body><p>hi</p></body></html>");
+SAME("<br>", "<html><head></head><body><br></body></html>");
+SAME("", "<html><head></head><body></body></html>");
+SAME("   \n  ", "<html><head></head><body></body></html>");
+SAME("<p>fragments are fine", "<html><head></head><body><p>fragments are fine</p></body></html>");
+SAME("<div><p>EOF closes everything", "<html><head></head><body><div><p>EOF closes everything</p></div></body></html>");
+SAME("<ul id=nav><li>Docs<li>Code</ul>", "<html><head></head><body><ul id=\"nav\"><li>Docs</li><li>Code</li></ul></body></html>");
+SAME("<ul><li>a<li>b<li>c</ul>", "<html><head></head><body><ul><li>a</li><li>b</li><li>c</li></ul></body></html>");
+SAME("<p>one<p>two<p>three", "<html><head></head><body><p>one</p><p>two</p><p>three</p></body></html>");
+SAME("<dl><dt>term<dd>def<dt>t2<dd>d2</dl>", "<html><head></head><body><dl><dt>term</dt><dd>def</dd><dt>t2</dt><dd>d2</dd></dl></body></html>");
+SAME("<table><tr><td>a<td>b<tr><td>c<td>d</table>", "<html><head></head><body><table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></body></html>");
+SAME("<table><thead><tr><th>H<tbody><tr><td>x</table>", "<html><head></head><body><table><thead><tr><th>H</th></tr></thead><tbody><tr><td>x</td></tr></tbody></table></body></html>");
+SAME("<select><option>a<option>b</select>", "<html><head></head><body><select><option>a</option><option>b</option></select></body></html>");
+SAME("<!DOCTYPE html><title>t</title>", "<html><head><title>t</title></head><body></body></html>");
+SAME("<!-- comment --><p>after", "<html><head></head><body><p>after</p></body></html>");
+SAME("<html lang=en><head><meta charset=utf-8><title>T</title></head><body><p>x</body></html>", "<html lang=\"en\"><head><meta charset=\"utf-8\"><title>T</title></head><body><p>x</p></body></html>");
+SAME("<meta charset=utf-8><link rel=stylesheet href=/a.css><p>body starts here", "<html><head><meta charset=\"utf-8\"><link rel=\"stylesheet\" href=\"/a.css\"></head><body><p>body starts here</p></body></html>");
+SAME("<style>p em{color:#333}</style><p>x", "<html><head><style>p em{color:#333}</style></head><body><p>x</p></body></html>");
+SAME(R"(<script type=module>if(a<b){go("</div>")}</script><p>x)", "<html><head><script type=\"module\">if(a<b){go(\"</div>\")}</script></head><body><p>x</p></body></html>");
+SAME("<title>Demo &amp; Docs &mdash; v2</title>", "<html><head><title>Demo &amp; Docs — v2</title></head><body></body></html>");
+SAME("<textarea>\nline1\nline2</textarea>", "<html><head></head><body><textarea>line1\nline2</textarea></body></html>");
+SAME("<p>a &amp; b &lt; c &#65; &#x42;</p>", "<html><head></head><body><p>a &amp; b &lt; c A B</p></body></html>");
+SAME("<input type=text disabled required>", "<html><head></head><body><input type=\"text\" disabled required></body></html>");
+SAME("<a href='/x' title=\"q&amp;a\">link</a>", "<html><head></head><body><a href=\"/x\" title=\"q&amp;a\">link</a></body></html>");
+SAME("<DIV CLASS=Big><P>Mixed CASE</P></DIV>", "<html><head></head><body><div class=\"Big\"><p>Mixed CASE</p></div></body></html>");
+SAME("<pre>  spaced\n  text  </pre>", "<html><head></head><body><pre>  spaced\n  text  </pre></body></html>");
+SAME("<div><span>a</span> <span>b</span></div>", "<html><head></head><body><div><span>a</span><span>b</span></div></body></html>");
+SAME("<p>x</p>\n\n<p>y</p>", "<html><head></head><body><p>x</p><p>y</p></body></html>");
+SAME("<section><h1>t</h1><p>para<ul><li>i</ul></section>", "<html><head></head><body><section><h1>t</h1><p>para</p><ul><li>i</li></ul></section></body></html>");
+SAME("<b><i>nested</i></b>", "<html><head></head><body><b><i>nested</i></b></body></html>");
+SAME("<img src=a.png alt='an image'><br><hr>", "<html><head></head><body><img src=\"a.png\" alt=\"an image\"><br><hr></body></html>");
+SAME("<custom-element data-x=1><child></child></custom-element>", "<html><head></head><body><custom-element data-x=\"1\"><child></child></custom-element></body></html>");
 
 // ============ ok()/error() mirrors is_valid<> ============
 
@@ -144,4 +141,3 @@ static_assert(selector_checks());
 	return out;
 }
 
-#endif // CTLL_CNTTP_COMPILER_CHECK

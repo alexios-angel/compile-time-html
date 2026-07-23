@@ -1,7 +1,7 @@
-// Walking a document generically: every node carries its kind, children
-// and attributes are iterable, so a recursive if-constexpr visitor can
-// pretty-print (or transform) any document - the traversal is resolved
-// at compile time, only the printing runs.
+// Walking a document generically: every node knows its name, text,
+// children and attributes, so a recursive visitor can pretty-print (or
+// transform) any document. The same walk that runs below at runtime
+// also folds inside a static_assert.
 //
 // Build: make introspection
 
@@ -9,24 +9,7 @@
 #include <iostream>
 #include <string>
 
-template <typename Node> void print(Node node, int indent = 0) {
-	const std::string pad(static_cast<size_t>(indent) * 2, ' ');
-	if constexpr (Node::type == cthtml::kind::text) {
-		std::cout << pad << '"' << Node::view() << '"' << "\n";
-	} else {
-		std::cout << pad << '<' << Node::name();
-		cthtml::for_each_attribute(node, [](auto name, auto value) {
-			std::cout << ' ' << name.view() << "=\"" << value.view() << '"';
-		});
-		std::cout << ">\n";
-		if constexpr (Node::child_count() != 0) {
-			cthtml::for_each_child(node, [&](auto child) { print(child, indent + 1); });
-			std::cout << pad << "</" << Node::name() << ">\n";
-		}
-	}
-}
-
-constexpr auto doc = cthtml::parse<R"(<!DOCTYPE html>
+inline constexpr std::string_view src = R"(<!DOCTYPE html>
 <title>feed</title>
 <section id=s1 class=starred>
 	<h2>Compile-time everything</h2>
@@ -35,12 +18,32 @@ constexpr auto doc = cthtml::parse<R"(<!DOCTYPE html>
 <section id=s2>
 	<h2>Parsers as tables</h2>
 </section>
-<hr>)">();
+<hr>)";
+
+static_assert(cthtml::parse(src).ok());
+static_assert(cthtml::parse(src).body().count("section") == 2);
+
+void print(cthtml::node n, int indent = 0) {
+	const std::string pad(static_cast<std::size_t>(indent) * 2, ' ');
+	std::cout << pad << '<' << n.name();
+	for (const cthtml::dom_attribute & a : n.attributes()) {
+		std::cout << ' ' << a.name << "=\"" << a.value << '"';
+	}
+	std::cout << ">\n";
+	if (!n.text().empty()) {
+		std::cout << pad << "  \"" << n.text() << '"' << "\n";
+	}
+	for (cthtml::node child : n) {
+		print(child, indent + 1);
+	}
+	std::cout << pad << "</" << n.name() << ">\n";
+}
 
 int main() {
-	print(doc);
+	const cthtml::document doc = cthtml::parse(src);
+	print(doc.root());
 
-	// the same document, re-serialized to minified form at compile time
-	constexpr auto minified = cthtml::serialize(doc);
+	// the same document, re-serialized to minified form
+	const std::string minified = cthtml::serialize(doc);
 	std::cout << "\nminified (" << minified.size() << " bytes):\n" << minified << "\n";
 }

@@ -69,13 +69,9 @@ endif()
 
 set(CTHTML_HEADERS
 	include/cthtml.hpp
-	include/cthtml/bind.hpp
 	include/cthtml/entities.hpp
-	include/cthtml/grammar.hpp
-	include/cthtml/serialize.hpp
-	include/cthtml/treebuild.hpp
 	include/cthtml/types.hpp
-	include/cthtml/views.hpp)
+	include/cthtml/value.hpp)
 file(GLOB_RECURSE CTHTML_CTLARK_HEADERS CONFIGURE_DEPENDS
 	external/compile-time-lark/include/*.hpp)
 

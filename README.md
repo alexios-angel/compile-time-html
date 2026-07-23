@@ -11,33 +11,35 @@
 
 # cthtml — compile-time HTML
 
-HTML5 parsed while your code compiles. The DOM is a *type*: broken
-markup is a compile error, lookups are resolved at compile time, and
-every accessor is `constexpr` — usable in `static_assert`, as template
-arguments, or at runtime with zero parsing cost. Write HTML the way
-HTML is written — void elements, `<li>` without `</li>`, unquoted
-attributes — and get back a browser-shaped document:
-`html > (head, body)`, always.
+HTML5 parsed while your code compiles. `cthtml::parse(std::string_view)`
+is a constexpr *value* parser: fold a page inside a `static_assert`, or
+hand it a runtime string — a file, a socket, a form field — with the
+same call. The result is an owned, browser-shaped document
+(`html > (head, body)`, always) with navigation, a CSS-subset selector
+engine and `serialize()` back to minified HTML. Write HTML the way HTML
+is written — void elements, `<li>` without `</li>`, unquoted attributes
+— and a mistake is a *value* (`ok()` / `error()`), never a mystery.
 
 ```c++
 #include <cthtml.hpp>
 
-constexpr auto page = cthtml::parse<R"(<!DOCTYPE html>
+inline constexpr std::string_view src = R"(<!DOCTYPE html>
 <title>demo &mdash; releases</title>
 <ul id=nav>
     <li><a href=/docs>docs &amp; guides</a>
     <li><a href=/code>code</a>
-</ul>)">();
+</ul>)";
 
-static_assert(page.name() == "html");
-static_assert(page.get<"head">().get<"title">().text() == "demo — releases");
-static_assert(page.get<"body">().get<"ul">().count<"li">() == 2);
-static_assert(page["body"]["ul"]["li"]["a"].attribute("href") == "/docs");
+static_assert(cthtml::parse(src).ok());
+static_assert(cthtml::parse(src).title() == "demo — releases");
+static_assert(cthtml::parse(src).body()["ul"].count("li") == 2);
+static_assert(cthtml::parse(src).body()["ul"]["li"]["a"].attribute("href") == "/docs");
 
-// author mistakes are a compile-time property:
-static_assert(!cthtml::is_valid<"<b><i>crossed</b></i>">);  // crossing close tag
-static_assert(!cthtml::is_valid<"<p x='1' x='2'></p>">);    // duplicate attribute
-static_assert(!cthtml::is_valid<"<div/>">);                 // only voids self-close
+// author mistakes are a queryable property:
+static_assert(!cthtml::parse("<b><i>crossed</b></i>").ok());  // crossing close tag
+static_assert(!cthtml::parse("<p x='1' x='2'></p>").ok());    // duplicate attribute
+static_assert(cthtml::parse("<div/>").error() ==
+              cthtml::bind_reason::self_closing_non_void);    // only voids self-close
 ```
 
 ## What is supported
@@ -59,7 +61,7 @@ HTML5 the way browsers read it, minus the repairs that hide bugs:
   ruby annotations — and EOF closes everything (`<div>hi` is valid)
 
 * **case-insensitive names**, stored canonically lowercase;
-  `get<"DIV">()`, `["Div"]` and `attribute<"ID">()` all hit
+  `["Div"]`, `["DIV"]` and `attribute("ID")` all hit
 
 * **attributes** double-quoted, single-quoted, unquoted (`width=100`)
   or bare boolean (`disabled`, reported as the empty string)
@@ -107,257 +109,58 @@ encodings other than UTF-8/ASCII.
 
 ## API
 
-```c++
-// acceptability as a bool (never a compile error):
-template <ctll::fixed_string input> constexpr bool cthtml::is_valid;
+One entry point, one document type (`value.hpp`):
 
-// the parsed document, always the html element; invalid HTML fails the build:
-template <ctll::fixed_string input> constexpr auto cthtml::parse();
-```
+- `cthtml::parse(std::string_view) -> cthtml::document` — constexpr;
+  never throws, never fails the build. `document::{ok, error,
+  error_where, root, head, body, title, query, query_all,
+  get_element_by_id}`.
+- `cthtml::node` — a cheap handle: `{name, text, operator[](tag | index),
+  count, attribute, has_attribute, attributes, parent, query,
+  query_all}`, plus range-`for` over children.
+- `cthtml::serialize(node | document) -> std::string` — minified HTML
+  (voids bare, boolean attributes bare, raw `<script>`/`<style>` bodies
+  unescaped).
+- `cthtml::bind_reason` — why a document that lexes was rejected:
+  `stray_end_tag`, `mismatched_tag`, `duplicate_attribute`,
+  `self_closing_non_void`, `depth_overflow` (+ `error_where()`).
+- Selectors (`query`/`query_all`): tag, `#id`, `.class`, `[attr]`,
+  `*`, descendant and `>` combinators.
 
-`parse` returns an `element`; its children are `element`s and `text`
-nodes:
-
-| Type | Accessors |
-|------|-----------|
-| `element<name, attrs, children...>` | `name()`, `attribute<"key">()`, `has_attribute<"key">()`, `attribute_count()`, positional `attribute_name<I>()` / `attribute_value<I>()`, `get<"tag">()` / `["tag"]` (first matching child element), `contains<"tag">()`, `count<"tag">()`, `child<I>()` / `[N]`, `child_count()`, `empty()`, `text()` |
-| `text<chars...>` | `view()`, `c_str()` (null-terminated), `size()`, `empty()`, `==` with `std::string_view` |
-
-Name lookups are case-insensitive everywhere. Every type carries
-`static constexpr cthtml::kind type` for introspection
-(`kind::element`, `kind::text`), and two free functions iterate at
-compile time:
-
-```c++
-cthtml::for_each_child(doc, [](auto child) { /* each has its own type */ });
-cthtml::for_each_attribute(doc, [](auto name, auto value) { ... });
-
-// render any element back to minified HTML, in static storage:
-static_assert(cthtml::serialize(cthtml::parse<"<ul id=nav><li>Docs</ul>">())
-    == R"(<html><head></head><body><ul id="nav"><li>Docs</li></ul></body></html>)");
-```
-
-Brackets and iteration:
-
-```c++
-doc["body"]["ul"];           // first matching child, as a uniform node_view
-doc[1];                      // child at position 1, as a uniform node_view
-doc["body"].attribute("class");   // runtime names; attribute<"class">() stays typed
-
-// begin/end yield uniform views (kind + name + text) from static storage,
-// so range-for and algorithms work - in constexpr evaluation included:
-for (const auto & n : doc) {
-    n.type;   // cthtml::kind::element or kind::text
-    n.name(); // elements: the tag; text nodes: empty
-    n.text(); // elements: their direct text; text nodes: the content
-}
-for (const auto & a : cthtml::attributes(doc)) {
-    a.name, a.value;   // std::string_views
-}
-```
-
-Children have distinct types, so a runtime tag or index cannot return the
-child itself. `operator[]` accepts an ordinary string or integer and returns
-a uniform `node_view`; when you need the child itself, with its typed
-accessors, use `get<...>()`, `child<I>()`, or `for_each_child`. The
-records are `node_view` and `attribute_view`
-([`views.hpp`](include/cthtml/views.hpp)), and
-[`examples/iteration.cpp`](examples/iteration.cpp) is a runnable tour.
-
-`serialize` renders HTML: text re-escapes `& < >` and attribute values
-`& "`, void elements come out bare (`<br>`), boolean attributes come
-out bare (`disabled`), other childless elements as `<div></div>`,
-`<script>`/`<style>` bodies pass through raw, and the result is
-null-terminated.
-
-## Parse a runtime string
-
-`parse<Src>()` needs its source as a template argument. Its sibling
-`parse(std::string_view)` takes the source as a *value* — for HTML known
-only at runtime (a file, a socket, a form field) — and runs the
-**identical** HTML5 tree construction over an owned
-`std::string`/`std::vector` tree:
-
-```c++
-std::string_view html = load_page();       // known only at runtime
-cthtml::document d = cthtml::parse(html);
-
-if (!d.ok()) {                             // a mistake is a value here,
-    log(cthtml::to_string(d.error()));     // not a compile error
-    return;
-}
-d.body()["ul"].count("li");
-for (cthtml::node a : d.query_all("#nav > li > a")) { visit(a.attribute("href")); }
-```
-
-Because `std::string`/`std::vector` are `constexpr` on this toolchain,
-the very same function also folds inside a constant expression — one
-engine, both worlds:
-
-```c++
-static_assert(cthtml::parse("<p>hi</p>").body().text() == "hi");
-static_assert(cthtml::parse("<ul><li>a<li>b</ul>").body()["ul"].count("li") == 2);
-```
-
-The result is byte-for-byte what `parse<Src>()` produces (a differential
-suite serializes both ways and compares) — implied `html > (head,
-body)`, void elements, optional end tags, raw-text/RCDATA elements and
-character references all included. The only difference is surface: an
-author mistake that makes `parse<Src>()` a compile error instead leaves
-`document::ok() == false` with the reason on `error()`.
-
-| Type | Accessors |
-|------|-----------|
-| `document` | `ok()`, `error()` / `error_where()`, `root()`, `head()`, `body()`, `title()`, `query()` / `query_all()`, `get_element_by_id()` |
-| `node` (a handle) | `name()`, `text()`, `type()`, `["tag"]` / `[i]`, `count()` / `contains()`, `attribute()` / `has_attribute()` / `attributes()`, `parent()`, `child_count()`, range-for over children, `query()` / `query_all()` |
-
-Selectors are a CSS subset: tag, `#id`, `.class`, `[attr]`,
-`[attr=value]`, `*`, with descendant (space) and child (`>`)
-combinators. `serialize(node)` / `serialize(document)` render an owned
-`std::string` by the same rules as the type-level `serialize`.
-
-## Debugging
-
-When `is_valid` says `false`, the reason is one query away, computed at
-compile time. Syntax failures carry the location and the expected
-tokens:
-
-```c++
-constexpr auto info = cthtml::error_info<"<p class=x">();
-// info.kind (lex/parse/...), info.position, info.line, info.column
-
-constexpr auto why = cthtml::error_message<"<p class=x">();
-// the rendered diagnostic: location, snippet with a caret, expected terminals
-```
-
-Documents that PARSE can still be rejected by tree construction; the
-error names the rule and the offending token:
-
-```c++
-cthtml::bind_error<"<b><i>x</b></i>">();  // mismatched_tag, where == "</b>"
-cthtml::bind_error<"<p>x</p></p>">();     // stray_end_tag, where == "</p>"
-cthtml::bind_error<"<p a=1 a=2></p>">();  // duplicate_attribute, where == "a"
-cthtml::bind_error<"<div/>">();           // self_closing_non_void, where == "<div"
-```
-
-A failed `parse<>()` names the failing stage and the query to run in
-its `static_assert` message. `cthtml::debug` bundles the [ctlark
-debugging toolbox](../compile-time-lark#debugging) with the HTML
-grammar baked in: `traced_parse<input>()` (a recorded event log, also
-runnable at runtime under a debugger), `parse_runtime(text)` (runtime
-inputs against the compile-time tables), `dump_tokens<input>()` and
-`dump_grammar()`.
-
-## C++17
-
-With a pre-C++20 compiler, inputs and keys are `constexpr
-ctll::fixed_string` variables with linkage instead of string literals:
-
-```c++
-static constexpr auto text = ctll::fixed_string{"<ul id=nav><li>Docs</ul>"};
-static constexpr ctll::fixed_string id_key = "id";
-
-constexpr auto doc = cthtml::parse<text>();
-static_assert(doc["body"]["ul"].attribute("id") == std::string_view{"nav"});
-```
+Constant evaluation note: an owned constexpr `document` cannot outlive
+constant evaluation (non-transient allocation), so a `static_assert`
+extracts scalar facts — bind the document to a local inside a constexpr
+lambda/function and return the check.
 
 ## How it works
 
-The grammar layer is
-[ctlark](https://github.com/alexios-angel/compile-time-lark)
-(compile-time Lark) — but unlike the XML/JSON/YAML siblings, the
-grammar does not nest elements at all, because HTML tag nesting is not
-context-free (end tags may be omitted, `<html>/<head>/<body>` are
-implied). Instead, the *lark grammar string*
-([`grammar.hpp`](include/cthtml/grammar.hpp)) lexes the document into a
-FLAT chunk stream — open tags, close tags, text, and whole raw-text
-elements, whose `*_BODY` terminals swallow `<script>`/`<style>` content
-up to the first real close tag by riding ctlark's **contextual** lexer
-(they are the only candidate tokens right after the open tag's `>`).
+A hand-written HTML5 tokenizer feeds the same tree-construction logic a
+browser parser runs — implied `<html>/<head>/<body>`, optional end
+tags, void elements, raw-text and RCDATA elements, case folding — over
+an owned `std::string`/`std::vector` tree, entirely in `constexpr`
+(`value.hpp`). Named and numeric character references decode through
+the generated WHATWG table (`entities.hpp` — regenerate with
+`python3 tools/gen-entities.py`, never edit by hand). Shared
+classification predicates live in `classify.hpp`/`types.hpp`.
 
-The binder ([`bind.hpp`](include/cthtml/bind.hpp)) lowers chunks into
-building blocks — names folded to lowercase, the three attribute value
-flavours plus booleans, character references decoded through the
-generated WHATWG table ([`entities.hpp`](include/cthtml/entities.hpp),
-regenerate with `tools/gen-entities.py`). Then the tree-construction
-layer ([`treebuild.hpp`](include/cthtml/treebuild.hpp)) does what a
-browser's tree builder does, at compile time, twice: a cheap
-value-level validator walks a name stack and reports the first author
-mistake (this is all `is_valid` costs), and a type-level fold — the
-open elements as a stack of frames — applies the auto-close table,
-attaches void and raw-text elements, merges adjacent text, synthesizes
-`html > (head, body)`, and closes everything at EOF, producing the one
-document type.
-
-Because that work happens in headers, a **precompiled header** makes
-it a one-time cost: `make pch` (done automatically by the test build)
-compiles `cthtml.hpp` once - grammar parse, table build and all - and
-every translation unit that includes it afterwards starts from the
-baked result. The CMake tests and examples use
-`target_precompile_headers` the same way (`CTHTML_PCH`, default ON).
-
-An Earley parse needs a raised constexpr budget; the CMake interface
-target carries the compiler-specific limit flags automatically
-(`CTHTML_CONSTEXPR_LIMITS`, default ON) and the Makefiles set them:
-
-```
-clang:  -fconstexpr-steps=500000000 -fconstexpr-depth=1024 -fbracket-depth=2048
-gcc:    -fconstexpr-ops-limit=3000000000 -fconstexpr-loop-limit=10000000 -fconstexpr-depth=1024
-```
-
-ctlark and ctll come in as a git submodule
-(`external/compile-time-lark` — clone with `--recurse-submodules` or
-run `git submodule update --init`); never edit under `external/`. The
-build adds the submodule's include directories so the headers'
-relative `"../ctlark.hpp"`-style includes resolve, and the CMake
-install flattens everything back to `include/{cthtml,ctlark,ctll}`.
+(The original implementation additionally encoded documents as C++
+*types* via a compile-time Earley grammar; that path was retired in
+2026-07 in favour of the single value parser — same tree construction,
+one code path, seconds to compile.)
 
 ## Building and integrating
 
-Header-only. Pick whichever fits your project:
-
-**CMake, as a subdirectory or via FetchContent:**
-
-```cmake
-add_subdirectory(compile-time-html)   # or FetchContent_MakeAvailable(cthtml)
-target_link_libraries(your-target PRIVATE cthtml::cthtml)
-```
-
-**CMake, installed** (`cmake -B build && cmake --install build`):
-
-```cmake
-find_package(cthtml 0.1 REQUIRED)
-target_link_libraries(your-target PRIVATE cthtml::cthtml)
-```
-
-The install also ships a `pkg-config` file (`cthtml.pc`). Tests and
-examples build only when cthtml is the top-level project
-(`CTHTML_BUILD_TESTS`, `CTHTML_BUILD_EXAMPLES`); `CTHTML_CXX_STANDARD`
-selects the advertised standard (default 20). CPack can produce
-TGZ/ZIP archives (plus DEB/RPM where the tooling exists), and
-`-DCTHTML_MODULE=ON` builds `cthtml.cppm` as a named C++ module
-(experimental; needs CMake 3.30+, a modules-capable toolchain and
-`import std`).
-
-**No build system:** add `include/` plus the submodule's
-`external/compile-time-lark/include` (and its `ctlark`/`ctll`
-subdirectories) to your include path, or copy the amalgamated
-[`single-header/cthtml.hpp`](single-header/cthtml.hpp)
-(regenerate with `make single-header`, which needs the
-[quom](https://pypi.org/project/quom/) tool).
-
-Requires C++17 (C++20 for the string-literal API). Runnable demos live
-in [`examples/`](examples/).
-
-Run the tests (compilation is the test — the suite is `static_assert`s):
+Header-only; C++20 or later (constexpr `std::string`/`std::vector`).
 
 ```bash
-git submodule update --init            # ctlark + ctll (once, after cloning)
-make CXX=clang++                       # C++20
-make CXX=clang++ CXX_STANDARD=17
-# or through CMake/CTest:
+make                 # compiles the static_assert test suite
+make CXX=clang++
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
+
+Vendor `include/` (plus `include/ctll/utilities.hpp` from the
+compile-time-lark submodule, which supplies the `CTLL_EXPORT` macro),
+or use the amalgamated `single-header/cthtml.hpp`.
 
 ## Roadmap
 

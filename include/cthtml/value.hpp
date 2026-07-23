@@ -1,7 +1,7 @@
 #ifndef CTHTML__VALUE__HPP
 #define CTHTML__VALUE__HPP
 
-#include "treebuild.hpp" // classification + entity/text helpers (also pulls types, bind, entities)
+#include "classify.hpp" // classification + entity/text helpers (also pulls types, bind, entities)
 #ifndef CTHTML_IN_A_MODULE
 #include <cstddef>
 #include <string>

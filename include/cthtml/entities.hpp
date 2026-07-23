@@ -1,7 +1,6 @@
 #ifndef CTHTML__ENTITIES__HPP
 #define CTHTML__ENTITIES__HPP
 
-#include "../ctll/fixed_string.hpp"
 #ifndef CTHTML_IN_A_MODULE
 #include <cstddef>
 #include <string_view>
