@@ -226,74 +226,13 @@ Software.
 #ifndef CTHTML__TYPES__HPP
 #define CTHTML__TYPES__HPP
 
-#ifndef CTLL__UTILITIES__HPP
-#define CTLL__UTILITIES__HPP
-
-#ifndef CTLL_IN_A_MODULE
-#include <type_traits>
-#endif
-
-#ifdef CTLL_IN_A_MODULE
-#define CTLL_EXPORT export
+// module-export seam: cthtml.cppm defines CTHTML_IN_A_MODULE and the
+// public names get `export`; plain includes get nothing
+#ifdef CTHTML_IN_A_MODULE
+#define CTHTML_EXPORT export
 #else
-#define CTLL_EXPORT 
+#define CTHTML_EXPORT
 #endif
-
-#if defined __cpp_nontype_template_parameter_class
-    #define CTLL_CNTTP_COMPILER_CHECK 1
-#elif defined __cpp_nontype_template_args
-// compiler which defines correctly feature test macro (not you clang)
-    #if __cpp_nontype_template_args >= 201911L
-        #define CTLL_CNTTP_COMPILER_CHECK 1
-    #elif __cpp_nontype_template_args >= 201411L
-// appleclang 13+
-      #if defined __apple_build_version__
-        #if defined __clang_major__ && __clang_major__ >= 13
-// but only in c++20 and more
-          #if __cplusplus > 201703L
-              #define CTLL_CNTTP_COMPILER_CHECK 1
-          #endif
-        #endif
-      #else 
-// clang 12+
-        #if defined __clang_major__ && __clang_major__ >= 12
-// but only in c++20 and more
-          #if __cplusplus > 201703L
-              #define CTLL_CNTTP_COMPILER_CHECK 1
-          #endif
-        #endif
-      #endif
-    #endif
-#endif
-
-#ifndef CTLL_CNTTP_COMPILER_CHECK
-    #define CTLL_CNTTP_COMPILER_CHECK 0
-#endif
-
-#ifdef _MSC_VER
-#define CTLL_FORCE_INLINE __forceinline
-#else
-#define CTLL_FORCE_INLINE __attribute__((always_inline))
-#endif
-
-namespace ctll {
-	
-template <bool> struct conditional_helper;
-	
-template <> struct conditional_helper<true> {
-	template <typename A, typename> using type = A;
-};
-
-template <> struct conditional_helper<false> {
-	template <typename, typename B> using type = B;
-};
-
-template <bool V, typename A, typename B> using conditional = typename conditional_helper<V>::template type<A,B>;
-	
-}
-
-#endif
-
 #ifndef CTHTML_IN_A_MODULE
 #include <cstddef>
 #include <initializer_list>
@@ -377,7 +316,7 @@ constexpr bool is_raw_text_tag(std::string_view t) noexcept {
 // why tree construction rejected a document that PARSES - author mistakes
 // cthtml refuses to repair. Grammar-free (both the TYPE builder and the runtime
 // VALUE parser report through these), so it lives here, not in bind.hpp.
-CTLL_EXPORT enum class bind_reason : unsigned char {
+CTHTML_EXPORT enum class bind_reason : unsigned char {
 	none,
 	stray_end_tag,         // a close tag with no matching open element
 	mismatched_tag,        // a close tag crossing a still-open element
@@ -386,7 +325,7 @@ CTLL_EXPORT enum class bind_reason : unsigned char {
 	depth_overflow         // more than 256 nested open elements
 };
 
-CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
+CTHTML_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 	switch (r) {
 		case bind_reason::none: return "none";
 		case bind_reason::stray_end_tag: return "a close tag with no matching open element";
@@ -400,7 +339,7 @@ CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 
 // the first tree-construction failure: which rule broke, and the raw offending
 // token as written in the input
-CTLL_EXPORT struct bind_error_t {
+CTHTML_EXPORT struct bind_error_t {
 	bind_reason reason = bind_reason::none;
 	std::string_view where{};
 
@@ -2593,74 +2532,13 @@ constexpr const entity_ref * find_entity(std::string_view name) noexcept {
 #ifndef CTHTML__TYPES__HPP
 #define CTHTML__TYPES__HPP
 
-#ifndef CTLL__UTILITIES__HPP
-#define CTLL__UTILITIES__HPP
-
-#ifndef CTLL_IN_A_MODULE
-#include <type_traits>
-#endif
-
-#ifdef CTLL_IN_A_MODULE
-#define CTLL_EXPORT export
+// module-export seam: cthtml.cppm defines CTHTML_IN_A_MODULE and the
+// public names get `export`; plain includes get nothing
+#ifdef CTHTML_IN_A_MODULE
+#define CTHTML_EXPORT export
 #else
-#define CTLL_EXPORT 
+#define CTHTML_EXPORT
 #endif
-
-#if defined __cpp_nontype_template_parameter_class
-    #define CTLL_CNTTP_COMPILER_CHECK 1
-#elif defined __cpp_nontype_template_args
-// compiler which defines correctly feature test macro (not you clang)
-    #if __cpp_nontype_template_args >= 201911L
-        #define CTLL_CNTTP_COMPILER_CHECK 1
-    #elif __cpp_nontype_template_args >= 201411L
-// appleclang 13+
-      #if defined __apple_build_version__
-        #if defined __clang_major__ && __clang_major__ >= 13
-// but only in c++20 and more
-          #if __cplusplus > 201703L
-              #define CTLL_CNTTP_COMPILER_CHECK 1
-          #endif
-        #endif
-      #else 
-// clang 12+
-        #if defined __clang_major__ && __clang_major__ >= 12
-// but only in c++20 and more
-          #if __cplusplus > 201703L
-              #define CTLL_CNTTP_COMPILER_CHECK 1
-          #endif
-        #endif
-      #endif
-    #endif
-#endif
-
-#ifndef CTLL_CNTTP_COMPILER_CHECK
-    #define CTLL_CNTTP_COMPILER_CHECK 0
-#endif
-
-#ifdef _MSC_VER
-#define CTLL_FORCE_INLINE __forceinline
-#else
-#define CTLL_FORCE_INLINE __attribute__((always_inline))
-#endif
-
-namespace ctll {
-	
-template <bool> struct conditional_helper;
-	
-template <> struct conditional_helper<true> {
-	template <typename A, typename> using type = A;
-};
-
-template <> struct conditional_helper<false> {
-	template <typename, typename B> using type = B;
-};
-
-template <bool V, typename A, typename B> using conditional = typename conditional_helper<V>::template type<A,B>;
-	
-}
-
-#endif
-
 #ifndef CTHTML_IN_A_MODULE
 #include <cstddef>
 #include <initializer_list>
@@ -2744,7 +2622,7 @@ constexpr bool is_raw_text_tag(std::string_view t) noexcept {
 // why tree construction rejected a document that PARSES - author mistakes
 // cthtml refuses to repair. Grammar-free (both the TYPE builder and the runtime
 // VALUE parser report through these), so it lives here, not in bind.hpp.
-CTLL_EXPORT enum class bind_reason : unsigned char {
+CTHTML_EXPORT enum class bind_reason : unsigned char {
 	none,
 	stray_end_tag,         // a close tag with no matching open element
 	mismatched_tag,        // a close tag crossing a still-open element
@@ -2753,7 +2631,7 @@ CTLL_EXPORT enum class bind_reason : unsigned char {
 	depth_overflow         // more than 256 nested open elements
 };
 
-CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
+CTHTML_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 	switch (r) {
 		case bind_reason::none: return "none";
 		case bind_reason::stray_end_tag: return "a close tag with no matching open element";
@@ -2767,7 +2645,7 @@ CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 
 // the first tree-construction failure: which rule broke, and the raw offending
 // token as written in the input
-CTLL_EXPORT struct bind_error_t {
+CTHTML_EXPORT struct bind_error_t {
 	bind_reason reason = bind_reason::none;
 	std::string_view where{};
 
@@ -2898,12 +2776,12 @@ namespace cthtml {
 
 // --- the owned tree
 
-CTLL_EXPORT struct dom_attribute {
+CTHTML_EXPORT struct dom_attribute {
 	std::string name;  // canonical lowercase
 	std::string value; // character references decoded; "" for a boolean attribute
 };
 
-CTLL_EXPORT struct dom_node {
+CTHTML_EXPORT struct dom_node {
 	kind type = kind::element;
 	std::string name;                     // element tag (lowercase); empty for text
 	std::string content;                  // text-node bytes (decoded); empty for element
@@ -2930,7 +2808,7 @@ constexpr bool class_list_has(std::string_view list, std::string_view cls) noexc
 // A lightweight handle into a document - the value analogue of
 // node_view, but able to walk to parents and run selectors. Copyable
 // and cheap; valid only while its document lives.
-CTLL_EXPORT class node {
+CTHTML_EXPORT class node {
 public:
 	constexpr node() noexcept = default;
 	constexpr node(const document * doc, std::size_t index) noexcept : doc_(doc), index_(index) { }
@@ -2998,7 +2876,7 @@ private:
 	std::size_t index_ = 0;
 };
 
-CTLL_EXPORT class document {
+CTHTML_EXPORT class document {
 public:
 	document() = default;
 
@@ -3848,7 +3726,7 @@ constexpr void build_document(document & doc, const std::vector<value_chunk> & c
 // Parse a value into an owned document. Invalid HTML is reported through
 // document::ok()/error() rather than as a compile error - the value
 // twin of cthtml::parse<>(), running the identical tree construction.
-CTLL_EXPORT constexpr document parse(std::string_view input) {
+CTHTML_EXPORT constexpr document parse(std::string_view input) {
 	document doc;
 	std::vector<detail::value_chunk> chunks;
 	if (!detail::scan_chunks(input, chunks)) {
@@ -3912,12 +3790,12 @@ constexpr void serialize_node(std::string & out, const document & d, std::size_t
 }
 } // namespace detail
 
-CTLL_EXPORT constexpr std::string serialize(node n) noexcept {
+CTHTML_EXPORT constexpr std::string serialize(node n) noexcept {
 	std::string out;
 	if (n.valid()) { detail::serialize_node(out, *n.document_ptr(), n.index()); }
 	return out;
 }
-CTLL_EXPORT constexpr std::string serialize(const document & d) noexcept {
+CTHTML_EXPORT constexpr std::string serialize(const document & d) noexcept {
 	std::string out;
 	detail::serialize_node(out, d, d.root().index());
 	return out;

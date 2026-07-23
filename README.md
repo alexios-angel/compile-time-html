@@ -1,7 +1,4 @@
-> **Attribution:** this library is built on the CTLL compile-time LL(1)
-> parser from [CTRE](https://github.com/hanickadot/compile-time-regular-expressions)
-> by Hana Dusíková, via the [notre](https://github.com/alexios-angel/notre)
-> fork, and follows the architecture of its siblings
+> **Attribution:** this library follows the architecture of its siblings
 > [compile-time-xml](https://github.com/alexios-angel/compile-time-xml),
 > [compile-time-json](https://github.com/alexios-angel/compile-time-json) and
 > [compile-time-json5](https://github.com/alexios-angel/compile-time-json5).
@@ -158,9 +155,8 @@ cmake --build --preset default  # compiling the suite IS the test
 ctest --preset default
 ```
 
-Vendor `include/` (plus `include/ctll/utilities.hpp` from the
-compile-time-lark submodule, which supplies the `CTLL_EXPORT` macro),
-or use the amalgamated `single-header/cthtml.hpp` (regenerate with
+Vendor `include/` (self-contained - no submodules), or use the
+amalgamated `single-header/cthtml.hpp` (regenerate with
 `cmake --build build --target single-header`; needs the
 [quom](https://pypi.org/project/quom/) tool).
 
@@ -175,5 +171,5 @@ been hand-written as native code.
 ## License
 
 Apache License 2.0 with LLVM Exceptions (see [LICENSE](LICENSE)).
-The CTLL parser is Hana Dusíková's work, via notre; the named
-character references are the WHATWG's; see [NOTICE](NOTICE).
+The named character references are the WHATWG's; the repo's historical
+CTLL/CTRE lineage is recorded in [NOTICE](NOTICE).

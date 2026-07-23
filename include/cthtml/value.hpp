@@ -36,12 +36,12 @@ namespace cthtml {
 
 // --- the owned tree
 
-CTLL_EXPORT struct dom_attribute {
+CTHTML_EXPORT struct dom_attribute {
 	std::string name;  // canonical lowercase
 	std::string value; // character references decoded; "" for a boolean attribute
 };
 
-CTLL_EXPORT struct dom_node {
+CTHTML_EXPORT struct dom_node {
 	kind type = kind::element;
 	std::string name;                     // element tag (lowercase); empty for text
 	std::string content;                  // text-node bytes (decoded); empty for element
@@ -68,7 +68,7 @@ constexpr bool class_list_has(std::string_view list, std::string_view cls) noexc
 // A lightweight handle into a document - the value analogue of
 // node_view, but able to walk to parents and run selectors. Copyable
 // and cheap; valid only while its document lives.
-CTLL_EXPORT class node {
+CTHTML_EXPORT class node {
 public:
 	constexpr node() noexcept = default;
 	constexpr node(const document * doc, std::size_t index) noexcept : doc_(doc), index_(index) { }
@@ -136,7 +136,7 @@ private:
 	std::size_t index_ = 0;
 };
 
-CTLL_EXPORT class document {
+CTHTML_EXPORT class document {
 public:
 	document() = default;
 
@@ -986,7 +986,7 @@ constexpr void build_document(document & doc, const std::vector<value_chunk> & c
 // Parse a value into an owned document. Invalid HTML is reported through
 // document::ok()/error() rather than as a compile error - the value
 // twin of cthtml::parse<>(), running the identical tree construction.
-CTLL_EXPORT constexpr document parse(std::string_view input) {
+CTHTML_EXPORT constexpr document parse(std::string_view input) {
 	document doc;
 	std::vector<detail::value_chunk> chunks;
 	if (!detail::scan_chunks(input, chunks)) {
@@ -1050,12 +1050,12 @@ constexpr void serialize_node(std::string & out, const document & d, std::size_t
 }
 } // namespace detail
 
-CTLL_EXPORT constexpr std::string serialize(node n) noexcept {
+CTHTML_EXPORT constexpr std::string serialize(node n) noexcept {
 	std::string out;
 	if (n.valid()) { detail::serialize_node(out, *n.document_ptr(), n.index()); }
 	return out;
 }
-CTLL_EXPORT constexpr std::string serialize(const document & d) noexcept {
+CTHTML_EXPORT constexpr std::string serialize(const document & d) noexcept {
 	std::string out;
 	detail::serialize_node(out, d, d.root().index());
 	return out;

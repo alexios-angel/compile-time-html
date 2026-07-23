@@ -62,27 +62,11 @@ set(CTHTML_CONSTEXPR_OPTIONS
   $<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=3000000000;-fconstexpr-loop-limit=10000000;-fconstexpr-depth=1024>
   $<$<CXX_COMPILER_ID:MSVC>:/constexpr:steps500000000;/constexpr:depth1024>)
 
-# ctlark and ctll live in a git submodule (git submodule update --init).
-# The extra .../include/ctlark and .../include/ctll entries let the headers'
-# relative `"../ctlark.hpp"`-style quoted includes resolve through the
-# quoted-include fallback; the install keeps the flat include/{cthtml,ctlark,ctll}
-# layout, so installed consumers need neither.
-set(CTHTML_SUBMODULE_INCLUDE_DIRS
-  "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include"
-  "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include/ctlark"
-  "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include/ctll")
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include/ctlark.hpp")
-  message(FATAL_ERROR
-    "cthtml: the compile-time-lark submodule is missing - run `git submodule update --init`")
-endif()
-
 set(CTHTML_HEADERS
 	include/cthtml.hpp
 	include/cthtml/entities.hpp
 	include/cthtml/types.hpp
 	include/cthtml/value.hpp)
-file(GLOB_RECURSE CTHTML_CTLARK_HEADERS CONFIGURE_DEPENDS
-	external/compile-time-lark/include/*.hpp)
 
 if(CTHTML_MODULE)
 	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.29.20240416")
@@ -91,10 +75,7 @@ if(CTHTML_MODULE)
 		target_sources(${PROJECT_NAME} PUBLIC FILE_SET CXX_MODULES TYPE CXX_MODULES FILES cthtml.cppm)
 		target_sources(${PROJECT_NAME} PUBLIC FILE_SET HEADERS TYPE HEADERS
 		    BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include"
-		        "${CMAKE_CURRENT_SOURCE_DIR}/external/compile-time-lark/include"
-		    FILES ${CTHTML_HEADERS} ${CTHTML_CTLARK_HEADERS})
-		target_include_directories(${PROJECT_NAME} PUBLIC
-		    "$<BUILD_INTERFACE:${CTHTML_SUBMODULE_INCLUDE_DIRS}>")
+		    FILES ${CTHTML_HEADERS})
 
 		# we are using `import std;`
 		if (NOT DEFINED CTHTML_CXX_STANDARD OR CTHTML_CXX_STANDARD LESS 23)
@@ -117,7 +98,6 @@ else()
 
 	target_include_directories(${PROJECT_NAME} INTERFACE
 	  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-	  "$<BUILD_INTERFACE:${CTHTML_SUBMODULE_INCLUDE_DIRS}>"
 	  $<INSTALL_INTERFACE:include>)
 
 	if (NOT CTHTML_CXX_STANDARD)
@@ -132,10 +112,6 @@ else()
 
 	install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets)
 	install(DIRECTORY include/ DESTINATION include
-	    FILES_MATCHING PATTERN *.hpp)
-	# the installed tree stays flat - include/{cthtml,ctlark,ctll} side by side -
-	# so the headers' relative includes keep working for installed consumers
-	install(DIRECTORY external/compile-time-lark/include/ DESTINATION include
 	    FILES_MATCHING PATTERN *.hpp)
 endif()
 
@@ -176,9 +152,6 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     add_custom_target(single-header
       COMMAND ${Python3_EXECUTABLE} -m quom
         "${PROJECT_SOURCE_DIR}/include/cthtml.hpp" cthtml.hpp.tmp
-        -I "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include"
-        -I "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include/ctlark"
-        -I "${PROJECT_SOURCE_DIR}/external/compile-time-lark/include/ctll"
       COMMAND ${CMAKE_COMMAND}
         -DLICENSE=${PROJECT_SOURCE_DIR}/LICENSE
         -DBODY=cthtml.hpp.tmp

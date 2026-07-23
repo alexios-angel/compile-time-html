@@ -33,8 +33,8 @@ Flags: `-O2 -pedantic -Wall -Wextra -Werror -Wconversion` — stay clean.
 - `include/cthtml/classify.hpp` — tag classification predicates.
 - `include/cthtml/entities.hpp` — GENERATED WHATWG named-reference
   table (`python3 tools/gen-entities.py`; never edit by hand).
-- `external/compile-time-lark/` — git SUBMODULE; only
-  `ctll/utilities.hpp` (the `CTLL_EXPORT` macro) is consumed now.
+- No submodules: the tree is self-contained (`CTHTML_EXPORT`, the
+  module-export macro, lives in types.hpp).
 - `tests/value.cpp`, `examples/` (page, wellformed, introspection,
   iteration — all value API), `single-header/cthtml.hpp` (quom),
   `cthtml.cppm` (module).
@@ -58,5 +58,6 @@ Flags: `-O2 -pedantic -Wall -Wextra -Werror -Wconversion` — stay clean.
   leniently, entity names case-SENSITIVE, tag/attr names fold lower;
   raw-text `</script` needs `>`; `a < b` in text is an error (write
   `&lt;`).
-- **Attribution** — CTLL is Hana Dusíková's (via notre, from CTRE); the
-  entity data is the WHATWG's. Preserve `NOTICE` and `LICENSE`.
+- **Attribution** — the entity data is the WHATWG's; the historical
+  CTLL/CTRE lineage is recorded in `NOTICE`. Preserve `NOTICE` and
+  `LICENSE`.

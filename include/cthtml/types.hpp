@@ -1,7 +1,13 @@
 #ifndef CTHTML__TYPES__HPP
 #define CTHTML__TYPES__HPP
 
-#include "../ctll/utilities.hpp"
+// module-export seam: cthtml.cppm defines CTHTML_IN_A_MODULE and the
+// public names get `export`; plain includes get nothing
+#ifdef CTHTML_IN_A_MODULE
+#define CTHTML_EXPORT export
+#else
+#define CTHTML_EXPORT
+#endif
 #ifndef CTHTML_IN_A_MODULE
 #include <cstddef>
 #include <initializer_list>
@@ -86,7 +92,7 @@ constexpr bool is_raw_text_tag(std::string_view t) noexcept {
 // why tree construction rejected a document that PARSES - author mistakes
 // cthtml refuses to repair. Grammar-free (both the TYPE builder and the runtime
 // VALUE parser report through these), so it lives here, not in bind.hpp.
-CTLL_EXPORT enum class bind_reason : unsigned char {
+CTHTML_EXPORT enum class bind_reason : unsigned char {
 	none,
 	stray_end_tag,         // a close tag with no matching open element
 	mismatched_tag,        // a close tag crossing a still-open element
@@ -95,7 +101,7 @@ CTLL_EXPORT enum class bind_reason : unsigned char {
 	depth_overflow         // more than 256 nested open elements
 };
 
-CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
+CTHTML_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 	switch (r) {
 		case bind_reason::none: return "none";
 		case bind_reason::stray_end_tag: return "a close tag with no matching open element";
@@ -109,7 +115,7 @@ CTLL_EXPORT constexpr std::string_view to_string(bind_reason r) noexcept {
 
 // the first tree-construction failure: which rule broke, and the raw offending
 // token as written in the input
-CTLL_EXPORT struct bind_error_t {
+CTHTML_EXPORT struct bind_error_t {
 	bind_reason reason = bind_reason::none;
 	std::string_view where{};
 

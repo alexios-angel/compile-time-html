@@ -12,8 +12,6 @@ jobs:
     steps:
       - run: sudo apt-get update && sudo apt-get install -y g++-${{ matrix.gcc }} ninja-build
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - run: >
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=g++-${{ matrix.gcc }}
@@ -35,8 +33,6 @@ jobs:
         with:
           version: ${{ matrix.clang }}
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - run: >
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=clang++
@@ -49,8 +45,6 @@ jobs:
     steps:
       - run: sudo apt-get update && sudo apt-get install -y ninja-build
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure
