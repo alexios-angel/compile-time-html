@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.14...4.3)
 
-if(NOT CMAKE_EXPERIMENTAL_CXX_STD AND NOT CMAKE_CXX_MODULE_STD)
+# the import-std experimental plumbing exists solely for the named
+# C++ module build (CTHTML_MODULE=ON); engaging it unconditionally makes
+# CMake demand std-modules metadata (libstdc++.modules.json) from
+# toolchains that do not ship it, failing ordinary C++23 configures
+if(CTHTML_MODULE AND NOT CMAKE_EXPERIMENTAL_CXX_STD AND NOT CMAKE_CXX_MODULE_STD)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30" AND CMAKE_VERSION VERSION_LESS_EQUAL "4.0")
         set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
     elseif(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0" AND CMAKE_VERSION VERSION_LESS "4.0.3")
