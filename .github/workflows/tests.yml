@@ -4,26 +4,32 @@ jobs:
   gcc:
     strategy:
       matrix:
-        gcc: [10, 12, 14]
-        standard: [17, 20]
+        gcc: [12, 14]
+        standard: [20, 23]
       fail-fast: false
     name: "GCC ${{ matrix.gcc }} (C++${{ matrix.standard }})"
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install g++-${{ matrix.gcc }}
+      - run: sudo apt-get update && sudo apt-get install -y g++-${{ matrix.gcc }} ninja-build
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - run: make CXX=g++-${{ matrix.gcc }} CXX_STANDARD=${{ matrix.standard }}
+      - run: >
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=g++-${{ matrix.gcc }}
+          -DCTHTML_CXX_STANDARD=${{ matrix.standard }}
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
   clang:
     strategy:
       matrix:
-        clang: [14, 16, 18]
-        standard: [17, 20]
+        clang: [16, 18]
+        standard: [20, 23]
       fail-fast: false
     name: "Clang ${{ matrix.clang }} (C++${{ matrix.standard }})"
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
       - name: "Install Clang"
         uses: egor-tensin/setup-clang@v1
         with:
@@ -31,15 +37,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - run: make CXX=clang++ CXX_STANDARD=${{ matrix.standard }}
-  cmake:
-    name: "CMake (configure, build, ctest)"
+      - run: >
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCTHTML_CXX_STANDARD=${{ matrix.standard }}
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+  install:
+    name: "Install (Ninja, package config)"
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-      - run: cmake --build build -j
+      - run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure
       - run: cmake --install build --prefix "$PWD/prefix"

@@ -36,7 +36,10 @@ static_assert(article_count() == 2);
 constexpr std::size_t attribute_chars() noexcept {
 	const cthtml::document doc = cthtml::parse(src);
 	std::size_t total = 0;
-	for (const cthtml::dom_attribute & a : doc.body()["main"].attributes()) {
+	// bind the handle first (house idiom): the attribute vector lives in
+	// the document, but gcc cannot see that through a chained temporary
+	const cthtml::node main_el = doc.body()["main"];
+	for (const cthtml::dom_attribute & a : main_el.attributes()) {
 		total += a.name.size() + a.value.size();
 	}
 	return total;
@@ -48,7 +51,8 @@ int main() {
 	for (cthtml::node n : doc.body()["main"]) {
 		std::cout << "<" << n.name() << "> " << n.text() << "\n";
 	}
-	for (const cthtml::dom_attribute & a : doc.body()["main"].attributes()) {
+	const cthtml::node main_el = doc.body()["main"];
+	for (const cthtml::dom_attribute & a : main_el.attributes()) {
 		std::cout << "@" << a.name << " = " << a.value << "\n";
 	}
 }

@@ -17,9 +17,8 @@ testimony — keep it passing.)
 ## Build & test — "compiling the tests IS the test"
 `tests/value.cpp` is a `static_assert` suite; compiling it = passing.
 ```bash
-make                # C++20+, seconds (no grammar bake exists anymore)
-make CXX=clang++
-cmake -B build && cmake --build build && ctest --test-dir build
+cmake --preset default && cmake --build --preset default && ctest --preset default
+# (CMake + Ninja is THE build - the Makefiles are gone; --preset clang for clang++)
 ```
 Flags: `-O2 -pedantic -Wall -Wextra -Werror -Wconversion` — stay clean.
 
