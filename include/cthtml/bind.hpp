@@ -55,21 +55,21 @@ using bt_SQVAL = ctlark::text<'S', 'Q', 'V', 'A', 'L'>;
 // HTML decoding never fails; the buffer is 2x because a short named
 // reference can decode to two code points ("&nGt;" is 6 UTF-8 bytes).
 
-template <typename Text, size_t From, size_t To> struct decode_entities {
+template <typename Text, std::size_t From, std::size_t To> struct decode_entities {
 	struct out_t {
 		char buf[Text::size() * 2 + 1]{};
-		size_t len = 0;
+		std::size_t len = 0;
 	};
 
 	// the windows-1252 remap HTML5 applies to numeric references
 	// 0x80-0x9F (entries mapping to themselves stay as-is)
-	static constexpr unsigned long win1252[32] = {
+	static constexpr char32_t win1252[32] = {
 	    0x20AC, 0x81, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
 	    0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x8D, 0x017D, 0x8F,
 	    0x90, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
 	    0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x9D, 0x017E, 0x0178};
 
-	static constexpr void put_utf8(out_t & o, unsigned long cp) noexcept {
+	static constexpr void put_utf8(out_t & o, char32_t cp) noexcept {
 		if (cp < 0x80) {
 			o.buf[o.len++] = static_cast<char>(cp);
 		} else if (cp < 0x800) {
@@ -87,7 +87,7 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 		}
 	}
 
-	static constexpr void put_numeric(out_t & o, unsigned long cp) noexcept {
+	static constexpr void put_numeric(out_t & o, char32_t cp) noexcept {
 		// HTML5: NUL, surrogates and beyond-Unicode become U+FFFD,
 		// C1 controls remap through windows-1252
 		if (cp == 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
@@ -101,8 +101,8 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 	static constexpr out_t compute() noexcept {
 		out_t o{};
 		constexpr std::string_view raw = Text::view();
-		size_t i = From;
-		const size_t end = raw.size() - To;
+		std::size_t i = From;
+		const std::size_t end = raw.size() - To;
 		while (i < end) {
 			const char c = raw[i];
 			if (c != '&') {
@@ -113,13 +113,13 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 			// numeric reference: &#123; or &#x1F600;
 			if (i + 1 < end && raw[i + 1] == '#') {
 				const bool hex = i + 2 < end && (raw[i + 2] == 'x' || raw[i + 2] == 'X');
-				size_t j = i + (hex ? 3 : 2);
-				unsigned long cp = 0;
-				size_t digits = 0;
+				std::size_t j = i + (hex ? 3 : 2);
+				char32_t cp = 0;
+				std::size_t digits = 0;
 				while (j < end && (hex ? is_ascii_hex(raw[j]) : is_ascii_digit(raw[j]))) {
 					if (cp <= 0x110000) {
-						cp = hex ? cp * 16 + static_cast<unsigned long>(bind_hexval(raw[j]))
-						         : cp * 10 + static_cast<unsigned long>(raw[j] - '0');
+						cp = hex ? cp * 16 + static_cast<char32_t>(bind_hexval(raw[j]))
+						         : cp * 10 + static_cast<char32_t>(raw[j] - '0');
 					}
 					++j;
 					++digits;
@@ -134,7 +134,7 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 				continue;
 			}
 			// named reference: &name; - unknown names stay literal
-			size_t j = i + 1;
+			std::size_t j = i + 1;
 			while (j < end && is_ascii_alnum(raw[j])) { ++j; }
 			if (j > i + 1 && j < end && raw[j] == ';') {
 				const entity_ref * e = find_entity(raw.substr(i + 1, j - i - 1));
@@ -153,7 +153,7 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 
 	static constexpr out_t data = compute();
 
-	template <size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
+	template <std::size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
 		return cthtml::text<data.buf[I]...>{};
 	}
 	using type = decltype(lift(std::make_index_sequence<data.len>{}));
@@ -161,17 +161,17 @@ template <typename Text, size_t From, size_t To> struct decode_entities {
 
 // --- spans lifted verbatim, and lifted with names folded to lowercase
 
-template <typename Text, size_t From, size_t To> struct strip_span {
-	static constexpr size_t length = Text::size() - From - To;
-	template <size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
+template <typename Text, std::size_t From, std::size_t To> struct strip_span {
+	static constexpr std::size_t length = Text::size() - From - To;
+	template <std::size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
 		return cthtml::text<Text::view()[From + I]...>{};
 	}
 	using type = decltype(lift(std::make_index_sequence<length>{}));
 };
 
-template <typename Text, size_t From, size_t To> struct lower_span {
-	static constexpr size_t length = Text::size() - From - To;
-	template <size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
+template <typename Text, std::size_t From, std::size_t To> struct lower_span {
+	static constexpr std::size_t length = Text::size() - From - To;
+	template <std::size_t... I> static constexpr auto lift(std::index_sequence<I...>) noexcept {
 		return cthtml::text<ascii_lower(Text::view()[From + I])...>{};
 	}
 	using type = decltype(lift(std::make_index_sequence<length>{}));
@@ -183,9 +183,9 @@ template <typename Token> struct open_name {
 };
 // "</name  >" -> name, lowercased (trailing whitespace and > trimmed)
 template <typename Token> struct close_name {
-	static constexpr size_t trailing() noexcept {
+	static constexpr std::size_t trailing() noexcept {
 		constexpr std::string_view raw = Token::value_type::view();
-		size_t n = 1; // the >
+		std::size_t n = 1; // the >
 		while (is_html_blank(raw[raw.size() - 1 - n])) { ++n; }
 		return n;
 	}
@@ -219,7 +219,7 @@ template <typename Text> constexpr bool text_blank(Text) noexcept {
 }
 
 // a single leading newline is dropped inside <pre> and <textarea>
-constexpr size_t lead_newline(std::string_view v) noexcept {
+constexpr std::size_t lead_newline(std::string_view v) noexcept {
 	if (v.size() >= 2 && v[0] == '\r' && v[1] == '\n') { return 2; }
 	if (!v.empty() && (v[0] == '\n' || v[0] == '\r')) { return 1; }
 	return 0;
@@ -238,7 +238,7 @@ template <typename Name> struct bind_attr<ctlark::tree<bt_attr, Name>> {
 };
 template <typename Name, typename VName, typename VText>
 struct bind_attr<ctlark::tree<bt_attr, Name, ctlark::token<VName, VText>>> {
-	static constexpr size_t quote =
+	static constexpr std::size_t quote =
 	    (std::is_same_v<VName, bt_DQVAL> || std::is_same_v<VName, bt_SQVAL>) ? 1 : 0;
 	using name_type = typename lower_span<typename Name::value_type, 0, 0>::type;
 	using decoded = decode_entities<VText, quote, quote>;
@@ -274,7 +274,7 @@ template <typename... Kids> using attrs_of =
 // the content can never contain a "</" + first-letter prefix of its
 // own tag (the terminal's unrolled regex guarantees it)
 
-template <typename Value> constexpr size_t body_close_at() noexcept {
+template <typename Value> constexpr std::size_t body_close_at() noexcept {
 	return Value::view().rfind("</");
 }
 
@@ -285,8 +285,8 @@ template <typename Value> struct raw_body {
 // title/textarea: RCDATA - character references decode; textarea also
 // drops a single leading newline, like <pre>
 template <typename Value, bool StripNewline> struct rcdata_body {
-	static constexpr size_t to = Value::size() - body_close_at<Value>();
-	static constexpr size_t from() noexcept {
+	static constexpr std::size_t to = Value::size() - body_close_at<Value>();
+	static constexpr std::size_t from() noexcept {
 		if constexpr (StripNewline) {
 			return lead_newline(Value::view().substr(0, Value::size() - to));
 		} else {

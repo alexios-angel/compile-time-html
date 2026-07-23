@@ -65,11 +65,11 @@ template <typename N, typename... Vs> struct attr_name_of<ctlark::tree<bt_attr, 
 };
 
 template <typename... Kids> constexpr bind_error_t dup_attr_check() noexcept {
-	constexpr size_t n = sizeof...(Kids);
+	constexpr std::size_t n = sizeof...(Kids);
 	const std::string_view names[] = {attr_name_of<Kids>::value..., std::string_view{}};
-	for (size_t i = 0; i < n; ++i) {
+	for (std::size_t i = 0; i < n; ++i) {
 		if (names[i].empty()) { continue; }
-		for (size_t j = i + 1; j < n; ++j) {
+		for (std::size_t j = i + 1; j < n; ++j) {
 			if (ascii_iequals(names[i], names[j])) {
 				return bind_error_t{bind_reason::duplicate_attribute, names[j]};
 			}
@@ -128,12 +128,12 @@ template <typename V> struct chunk_of<ctlark::token<bt_TEXT, V>> {
 // tb_depth_cap and span_blank now live in classify.hpp (shared, grammar-free)
 
 template <typename... Chunks> constexpr bind_error_t validate_chunks() noexcept {
-	constexpr size_t n = sizeof...(Chunks);
+	constexpr std::size_t n = sizeof...(Chunks);
 	const chunk_info cs[] = {chunk_of<Chunks>::info()..., chunk_info{}};
 	std::string_view stack[tb_depth_cap]{};
-	size_t sp = 0;
+	std::size_t sp = 0;
 	int mode = 0; // 0 = collecting head, 1 = in body
-	for (size_t idx = 0; idx < n; ++idx) {
+	for (std::size_t idx = 0; idx < n; ++idx) {
 		const chunk_info & c = cs[idx];
 		if (c.local.reason != bind_reason::none) { return c.local; }
 		if (c.kind == ck_text) {
@@ -167,7 +167,7 @@ template <typename... Chunks> constexpr bind_error_t validate_chunks() noexcept 
 		if (ascii_iequals(t, "body") || ascii_iequals(t, "html")) {
 			// closes everything still open - but only through omissible
 			// end tags; anything else is a real mistake
-			for (size_t k = 0; k < sp; ++k) {
+			for (std::size_t k = 0; k < sp; ++k) {
 				if (!end_omissible(stack[k])) {
 					return bind_error_t{bind_reason::mismatched_tag, c.raw};
 				}
@@ -196,7 +196,7 @@ template <typename... Chunks> constexpr bind_error_t validate_chunks() noexcept 
 		// no match: closing something never opened is a stray; closing
 		// across a still-open element is a mismatch
 		bool open_below = false;
-		for (size_t k = 0; k < sp; ++k) {
+		for (std::size_t k = 0; k < sp; ++k) {
 			if (ascii_iequals(stack[k], t)) { open_below = true; }
 		}
 		return bind_error_t{open_below ? bind_reason::mismatched_tag
@@ -236,7 +236,7 @@ template <typename S> struct tb_traits;
 template <int M, typename HA, typename H, typename... Fs>
 struct tb_traits<tb_state<M, HA, H, ctll::list<Fs...>>> {
 	static constexpr int mode = M;
-	static constexpr size_t depth = sizeof...(Fs);
+	static constexpr std::size_t depth = sizeof...(Fs);
 };
 
 template <typename... A, typename... B>

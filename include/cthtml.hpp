@@ -1,6 +1,8 @@
 #ifndef CTHTML__HPP
 #define CTHTML__HPP
 
+#include <cstddef>
+
 // CTHTML_NO_GRAMMAR: skip the lark/Earley HTML grammar and the type-path tree
 // builder - needed only by the compile-time TYPE path (parse<>()/is_valid<>). A
 // TU that uses only the runtime VALUE path (cthtml::parse(std::string_view))
@@ -133,7 +135,7 @@ CTLL_EXPORT template <CTHTML_STRING_INPUT input> constexpr auto parse() noexcept
 // against the compile-time tables, token and grammar dumps
 namespace debug {
 
-CTLL_EXPORT template <CTHTML_STRING_INPUT input, size_t Cap = 4096> constexpr auto traced_parse() noexcept {
+CTLL_EXPORT template <CTHTML_STRING_INPUT input, std::size_t Cap = 4096> constexpr auto traced_parse() noexcept {
 	return ctlark::debug::traced_parse<detail::html_grammar, input, detail::html_start, Cap>();
 }
 
@@ -145,7 +147,7 @@ CTLL_EXPORT constexpr std::string_view dump_grammar() noexcept {
 	return ctlark::debug::dump_grammar<detail::html_grammar>();
 }
 
-CTLL_EXPORT template <size_t MaxTokens = 1024>
+CTLL_EXPORT template <std::size_t MaxTokens = 1024>
 ctlark::debug::runtime_result parse_runtime(std::string_view in) {
 	return ctlark::debug::parse_runtime<detail::html_grammar, MaxTokens>(in, "start");
 }

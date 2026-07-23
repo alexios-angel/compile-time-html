@@ -36,7 +36,7 @@ template <auto... Chars> struct text {
 	static constexpr const char * c_str() noexcept {
 		return storage;
 	}
-	static constexpr size_t size() noexcept {
+	static constexpr std::size_t size() noexcept {
 		return sizeof...(Chars);
 	}
 	static constexpr bool empty() noexcept {
@@ -94,7 +94,7 @@ constexpr bool ascii_iequals(std::string_view a, std::string_view b) noexcept {
 	if (a.size() != b.size()) {
 		return false;
 	}
-	for (size_t i = 0; i < a.size(); ++i) {
+	for (std::size_t i = 0; i < a.size(); ++i) {
 		if (ascii_lower(a[i]) != ascii_lower(b[i])) {
 			return false;
 		}
@@ -167,10 +167,10 @@ CTLL_EXPORT struct attribute_view {
 
 CTLL_EXPORT struct attribute_range {
 	const attribute_view * data = nullptr;
-	size_t count = 0;
+	std::size_t count = 0;
 	constexpr const attribute_view * begin() const noexcept { return data; }
 	constexpr const attribute_view * end() const noexcept { return data + (data ? count : 0); }
-	constexpr size_t size() const noexcept { return count; }
+	constexpr std::size_t size() const noexcept { return count; }
 	constexpr bool empty() const noexcept { return count == 0; }
 };
 
@@ -180,38 +180,38 @@ CTLL_EXPORT struct node_view {
 	std::string_view content{};
 	const node_view * child_data = nullptr;
 	const attribute_view * attribute_data = nullptr;
-	size_t children = 0;
-	size_t attrs = 0;
+	std::size_t children = 0;
+	std::size_t attrs = 0;
 
 	constexpr std::string_view name() const noexcept { return tag; }
 	constexpr std::string_view text() const noexcept { return content; }
-	constexpr size_t child_count() const noexcept { return children; }
-	constexpr size_t size() const noexcept { return children; }
+	constexpr std::size_t child_count() const noexcept { return children; }
+	constexpr std::size_t size() const noexcept { return children; }
 	constexpr bool empty() const noexcept { return children == 0; }
 	constexpr node_view operator[](std::string_view name) const noexcept {
-		for (size_t i = 0; i < children; ++i)
+		for (std::size_t i = 0; i < children; ++i)
 			if (child_data[i].type == kind::element && detail::ascii_iequals(child_data[i].tag, name)) return child_data[i];
 		return {};
 	}
-	constexpr node_view operator[](size_t index) const noexcept {
+	constexpr node_view operator[](std::size_t index) const noexcept {
 		return index < children ? child_data[index] : node_view{};
 	}
 	constexpr bool contains(std::string_view name) const noexcept {
-		for (size_t i = 0; i < children; ++i)
+		for (std::size_t i = 0; i < children; ++i)
 			if (child_data[i].type == kind::element && detail::ascii_iequals(child_data[i].tag, name)) return true;
 		return false;
 	}
-	constexpr size_t count(std::string_view name) const noexcept {
-		size_t n = 0;
-		for (size_t i = 0; i < children; ++i) n += child_data[i].type == kind::element && detail::ascii_iequals(child_data[i].tag, name);
+	constexpr std::size_t count(std::string_view name) const noexcept {
+		std::size_t n = 0;
+		for (std::size_t i = 0; i < children; ++i) n += child_data[i].type == kind::element && detail::ascii_iequals(child_data[i].tag, name);
 		return n;
 	}
 	constexpr bool has_attribute(std::string_view name) const noexcept {
-		for (size_t i = 0; i < attrs; ++i) if (detail::ascii_iequals(attribute_data[i].name, name)) return true;
+		for (std::size_t i = 0; i < attrs; ++i) if (detail::ascii_iequals(attribute_data[i].name, name)) return true;
 		return false;
 	}
 	constexpr std::string_view attribute(std::string_view name) const noexcept {
-		for (size_t i = 0; i < attrs; ++i) if (detail::ascii_iequals(attribute_data[i].name, name)) return attribute_data[i].value;
+		for (std::size_t i = 0; i < attrs; ++i) if (detail::ascii_iequals(attribute_data[i].name, name)) return attribute_data[i].value;
 		return {};
 	}
 	constexpr const node_view * begin() const noexcept { return child_data; }
@@ -233,7 +233,7 @@ template <const auto & Key, typename Text> constexpr bool text_matches() noexcep
 	if (Key.size() != view.size()) {
 		return false;
 	}
-	for (size_t i = 0; i < view.size(); ++i) {
+	for (std::size_t i = 0; i < view.size(); ++i) {
 		// names compare case-insensitively (stored lowercase already)
 		const char32_t k = Key[i];
 		const char32_t kf = (k >= U'A' && k <= U'Z') ? k - U'A' + U'a' : k;
@@ -245,7 +245,7 @@ template <const auto & Key, typename Text> constexpr bool text_matches() noexcep
 }
 
 // concatenated storage for an element's direct text children
-template <typename Child> constexpr size_t text_size_of() noexcept {
+template <typename Child> constexpr std::size_t text_size_of() noexcept {
 	if constexpr (Child::type == kind::text) {
 		return Child::size();
 	} else {
@@ -262,12 +262,12 @@ template <typename Child> constexpr std::string_view text_view_of() noexcept {
 }
 
 template <typename... Children> struct joined_text {
-	static constexpr size_t length = (text_size_of<Children>() + ... + 0);
+	static constexpr std::size_t length = (text_size_of<Children>() + ... + 0);
 	static constexpr auto compute() noexcept {
 		struct out_t {
 			char content[length + 1]{};
 		} out{};
-		size_t at = 0;
+		std::size_t at = 0;
 		const auto append = [&](std::string_view piece) {
 			for (const char c : piece) {
 				out.content[at++] = c;
@@ -280,7 +280,7 @@ template <typename... Children> struct joined_text {
 	static constexpr std::string_view view{content.content, length};
 };
 
-template <size_t Index, typename Head, typename... Tail> constexpr auto nth() noexcept {
+template <std::size_t Index, typename Head, typename... Tail> constexpr auto nth() noexcept {
 	if constexpr (Index == 0) {
 		return Head{};
 	} else {
@@ -306,7 +306,7 @@ struct element<Name, ctll::list<Attributes...>, Children...> {
 
 	// --- attributes
 
-	static constexpr size_t attribute_count() noexcept {
+	static constexpr std::size_t attribute_count() noexcept {
 		return sizeof...(Attributes);
 	}
 
@@ -331,25 +331,25 @@ struct element<Name, ctll::list<Attributes...>, Children...> {
 #endif
 
 	// positional access, for iterating attributes
-	template <size_t Index> static constexpr auto attribute_name() noexcept {
+	template <std::size_t Index> static constexpr auto attribute_name() noexcept {
 		static_assert(Index < sizeof...(Attributes), "cthtml: attribute index out of range");
 		return typename decltype(detail::nth<Index, Attributes...>())::name_type{};
 	}
-	template <size_t Index> static constexpr auto attribute_value() noexcept {
+	template <std::size_t Index> static constexpr auto attribute_value() noexcept {
 		static_assert(Index < sizeof...(Attributes), "cthtml: attribute index out of range");
 		return typename decltype(detail::nth<Index, Attributes...>())::value_type{};
 	}
 
 	// --- children (child elements and non-whitespace text, in order)
 
-	static constexpr size_t child_count() noexcept {
+	static constexpr std::size_t child_count() noexcept {
 		return sizeof...(Children);
 	}
 	static constexpr bool empty() noexcept {
 		return sizeof...(Children) == 0;
 	}
 
-	template <size_t Index> static constexpr auto child() noexcept {
+	template <std::size_t Index> static constexpr auto child() noexcept {
 		static_assert(Index < sizeof...(Children), "cthtml: child index out of range");
 		return detail::nth<Index, Children...>();
 	}
@@ -369,8 +369,8 @@ struct element<Name, ctll::list<Attributes...>, Children...> {
 	template <ctll::fixed_string Tag> static constexpr bool contains() noexcept {
 		return (child_matches<Tag, Children>() || ...);
 	}
-	template <ctll::fixed_string Tag> static constexpr size_t count() noexcept {
-		return (static_cast<size_t>(child_matches<Tag, Children>()) + ... + 0);
+	template <ctll::fixed_string Tag> static constexpr std::size_t count() noexcept {
+		return (static_cast<std::size_t>(child_matches<Tag, Children>()) + ... + 0);
 	}
 	// the first child element with this tag; missing is a compile error
 	template <ctll::fixed_string Tag> static constexpr auto get() noexcept {
@@ -381,8 +381,8 @@ struct element<Name, ctll::list<Attributes...>, Children...> {
 	template <const auto & Tag> static constexpr bool contains() noexcept {
 		return (child_matches<Tag, Children>() || ...);
 	}
-	template <const auto & Tag> static constexpr size_t count() noexcept {
-		return (static_cast<size_t>(child_matches<Tag, Children>()) + ... + 0);
+	template <const auto & Tag> static constexpr std::size_t count() noexcept {
+		return (static_cast<std::size_t>(child_matches<Tag, Children>()) + ... + 0);
 	}
 	template <const auto & Tag> static constexpr auto get() noexcept {
 		static_assert((child_matches<Tag, Children>() || ...), "cthtml: no child element with this tag");
@@ -391,9 +391,9 @@ struct element<Name, ctll::list<Attributes...>, Children...> {
 #endif
 
 	constexpr node_view operator[](std::string_view tag) const noexcept { return detail::view_of<element>()[tag]; }
-	constexpr node_view operator[](size_t index) const noexcept { return detail::view_of<element>()[index]; }
+	constexpr node_view operator[](std::size_t index) const noexcept { return detail::view_of<element>()[index]; }
 	constexpr bool contains(std::string_view tag) const noexcept { return detail::view_of<element>().contains(tag); }
-	constexpr size_t count(std::string_view tag) const noexcept { return detail::view_of<element>().count(tag); }
+	constexpr std::size_t count(std::string_view tag) const noexcept { return detail::view_of<element>().count(tag); }
 	constexpr std::string_view attribute(std::string_view name) const noexcept { return detail::view_of<element>().attribute(name); }
 	constexpr bool has_attribute(std::string_view name) const noexcept { return detail::view_of<element>().has_attribute(name); }
 

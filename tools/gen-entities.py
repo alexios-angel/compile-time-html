@@ -35,8 +35,8 @@ namespace cthtml::detail {{
 
 struct entity_ref {{
 	std::string_view name;
-	unsigned long first;
-	unsigned long second;
+	char32_t first;
+	char32_t second;
 }};
 
 inline constexpr entity_ref entity_table[] = {{

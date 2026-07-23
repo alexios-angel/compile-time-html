@@ -29,7 +29,7 @@ namespace cthtml {
 
 namespace detail {
 
-constexpr size_t escaped_size(char c, bool in_attribute) noexcept {
+constexpr std::size_t escaped_size(char c, bool in_attribute) noexcept {
 	switch (c) {
 		case '&': return 5;                       // &amp;
 		case '<': return 4;                       // &lt;
@@ -59,19 +59,19 @@ constexpr char * write_escaped(char * out, char c, bool in_attribute) noexcept {
 
 // --- size pass
 
-template <auto... Cs> constexpr size_t serialized_size(text<Cs...>) noexcept {
-	size_t total = 0;
+template <auto... Cs> constexpr std::size_t serialized_size(text<Cs...>) noexcept {
+	std::size_t total = 0;
 	((total += escaped_size(static_cast<char>(Cs), false)), ...);
 	return total;
 }
 
 template <typename Name, typename... Attributes, typename... Children>
-constexpr size_t serialized_size(element<Name, ctll::list<Attributes...>, Children...>) noexcept {
-	size_t total = 1 + Name::size(); // <name
+constexpr std::size_t serialized_size(element<Name, ctll::list<Attributes...>, Children...>) noexcept {
+	std::size_t total = 1 + Name::size(); // <name
 	// attributes: space name="value", or bare space name when empty
 	((total += 1 + Attributes::name_type::size() +
 	           (Attributes::value_type::size() == 0 ? 0 : 2 + [] {
-		           size_t value = 0;
+		           std::size_t value = 0;
 		           constexpr auto view = Attributes::value_type::view();
 		           for (const char c : view) {
 			           value += escaped_size(c, true);
@@ -147,7 +147,7 @@ constexpr char * serialize_to(char * out, element<Name, ctll::list<Attributes...
 
 // the rendered document lives in static storage, one array per type
 template <typename Node> struct serialized_storage {
-	static constexpr size_t length = serialized_size(Node{});
+	static constexpr std::size_t length = serialized_size(Node{});
 	// one extra element keeps the rendering null-terminated
 	static constexpr std::array<char, length + 1> compute() noexcept {
 		std::array<char, length + 1> out{};

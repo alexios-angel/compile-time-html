@@ -1,6 +1,8 @@
 #ifndef CTHTML__CLASSIFY__HPP
 #define CTHTML__CLASSIFY__HPP
 
+#include <cstddef>
+
 #include "types.hpp"
 #ifndef CTHTML_IN_A_MODULE
 #include <initializer_list>
@@ -82,7 +84,7 @@ constexpr bool span_blank(std::string_view v) noexcept {
 enum chunk_kind : int { ck_none, ck_open, ck_self, ck_close, ck_text, ck_raw };
 
 // nesting cap (shared: both parsers reject documents deeper than this)
-inline constexpr size_t tb_depth_cap = 256;
+inline constexpr std::size_t tb_depth_cap = 256;
 
 } // namespace cthtml::detail
 

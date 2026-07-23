@@ -46,18 +46,18 @@ CTLL_EXPORT struct dom_node {
 	std::string name;                     // element tag (lowercase); empty for text
 	std::string content;                  // text-node bytes (decoded); empty for element
 	std::vector<dom_attribute> attributes;
-	std::vector<size_t> children;         // indices into document::nodes()
-	size_t parent = static_cast<size_t>(-1);
+	std::vector<std::size_t> children;         // indices into document::nodes()
+	std::size_t parent = static_cast<std::size_t>(-1);
 };
 
 class document;
 
 namespace detail {
 constexpr bool class_list_has(std::string_view list, std::string_view cls) noexcept {
-	size_t i = 0;
+	std::size_t i = 0;
 	while (i < list.size()) {
 		while (i < list.size() && is_html_blank(list[i])) { ++i; }
-		const size_t start = i;
+		const std::size_t start = i;
 		while (i < list.size() && !is_html_blank(list[i])) { ++i; }
 		if (i > start && list.substr(start, i - start) == cls) { return true; }
 	}
@@ -71,11 +71,11 @@ constexpr bool class_list_has(std::string_view list, std::string_view cls) noexc
 CTLL_EXPORT class node {
 public:
 	constexpr node() noexcept = default;
-	constexpr node(const document * doc, size_t index) noexcept : doc_(doc), index_(index) { }
+	constexpr node(const document * doc, std::size_t index) noexcept : doc_(doc), index_(index) { }
 
 	constexpr bool valid() const noexcept { return doc_ != nullptr; }
 	constexpr explicit operator bool() const noexcept { return valid(); }
-	constexpr size_t index() const noexcept { return index_; }
+	constexpr std::size_t index() const noexcept { return index_; }
 	constexpr const document * document_ptr() const noexcept { return doc_; }
 
 	constexpr kind type() const noexcept;
@@ -89,17 +89,17 @@ public:
 	constexpr std::string text() const noexcept;
 
 	// --- children (element and non-blank text nodes, in order)
-	constexpr size_t child_count() const noexcept;
+	constexpr std::size_t child_count() const noexcept;
 	constexpr bool empty() const noexcept { return child_count() == 0; }
-	constexpr node child(size_t i) const noexcept;
-	constexpr node operator[](size_t i) const noexcept { return child(i); }
+	constexpr node child(std::size_t i) const noexcept;
+	constexpr node operator[](std::size_t i) const noexcept { return child(i); }
 	// the first child element with this tag (invalid node if none)
 	constexpr node operator[](std::string_view tag) const noexcept;
 	constexpr bool contains(std::string_view tag) const noexcept;
-	constexpr size_t count(std::string_view tag) const noexcept;
+	constexpr std::size_t count(std::string_view tag) const noexcept;
 
 	// --- attributes
-	constexpr size_t attribute_count() const noexcept;
+	constexpr std::size_t attribute_count() const noexcept;
 	constexpr bool has_attribute(std::string_view name) const noexcept;
 	constexpr std::string_view attribute(std::string_view name) const noexcept;
 	constexpr const std::vector<dom_attribute> & attributes() const noexcept;
@@ -120,20 +120,20 @@ public:
 	// range-for over children
 	class iterator {
 	public:
-		constexpr iterator(const document * d, const size_t * p) noexcept : doc_(d), p_(p) { }
+		constexpr iterator(const document * d, const std::size_t * p) noexcept : doc_(d), p_(p) { }
 		constexpr node operator*() const noexcept { return node{doc_, *p_}; }
 		constexpr iterator & operator++() noexcept { ++p_; return *this; }
 		constexpr bool operator!=(const iterator & o) const noexcept { return p_ != o.p_; }
 	private:
 		const document * doc_;
-		const size_t * p_;
+		const std::size_t * p_;
 	};
 	constexpr iterator begin() const noexcept;
 	constexpr iterator end() const noexcept;
 
 private:
 	const document * doc_ = nullptr;
-	size_t index_ = 0;
+	std::size_t index_ = 0;
 };
 
 CTLL_EXPORT class document {
@@ -167,13 +167,13 @@ public:
 	constexpr node get_element_by_id(std::string_view id) const noexcept;
 
 	// arena access (used by node)
-	constexpr const dom_node & at(size_t i) const noexcept { return nodes_[i]; }
-	constexpr size_t size() const noexcept { return nodes_.size(); }
+	constexpr const dom_node & at(std::size_t i) const noexcept { return nodes_[i]; }
+	constexpr std::size_t size() const noexcept { return nodes_.size(); }
 	constexpr const std::vector<dom_node> & nodes() const noexcept { return nodes_; }
 
 	// internals filled by the parser
 	std::vector<dom_node> nodes_;
-	size_t root_ = 0;
+	std::size_t root_ = 0;
 	bool wellformed_ = true;
 	bind_reason reason_ = bind_reason::none;
 	std::string where_;
@@ -184,8 +184,8 @@ public:
 
 constexpr kind node::type() const noexcept { return doc_->at(index_).type; }
 constexpr std::string_view node::name() const noexcept { return doc_->at(index_).name; }
-constexpr size_t node::child_count() const noexcept { return doc_->at(index_).children.size(); }
-constexpr size_t node::attribute_count() const noexcept { return doc_->at(index_).attributes.size(); }
+constexpr std::size_t node::child_count() const noexcept { return doc_->at(index_).children.size(); }
+constexpr std::size_t node::attribute_count() const noexcept { return doc_->at(index_).attributes.size(); }
 constexpr const std::vector<dom_attribute> & node::attributes() const noexcept {
 	return doc_->at(index_).attributes;
 }
@@ -202,19 +202,19 @@ constexpr std::string node::text() const noexcept {
 	const dom_node & n = doc_->at(index_);
 	if (n.type == kind::text) { return n.content; }
 	std::string out;
-	for (const size_t ci : n.children) {
+	for (const std::size_t ci : n.children) {
 		const dom_node & c = doc_->at(ci);
 		if (c.type == kind::text) { out += c.content; }
 	}
 	return out;
 }
 
-constexpr node node::child(size_t i) const noexcept {
+constexpr node node::child(std::size_t i) const noexcept {
 	const auto & c = doc_->at(index_).children;
 	return i < c.size() ? node{doc_, c[i]} : node{};
 }
 constexpr node node::operator[](std::string_view tag) const noexcept {
-	for (const size_t ci : doc_->at(index_).children) {
+	for (const std::size_t ci : doc_->at(index_).children) {
 		const dom_node & c = doc_->at(ci);
 		if (c.type == kind::element && detail::ascii_iequals(c.name, tag)) { return node{doc_, ci}; }
 	}
@@ -223,9 +223,9 @@ constexpr node node::operator[](std::string_view tag) const noexcept {
 constexpr bool node::contains(std::string_view tag) const noexcept {
 	return (*this)[tag].valid();
 }
-constexpr size_t node::count(std::string_view tag) const noexcept {
-	size_t n = 0;
-	for (const size_t ci : doc_->at(index_).children) {
+constexpr std::size_t node::count(std::string_view tag) const noexcept {
+	std::size_t n = 0;
+	for (const std::size_t ci : doc_->at(index_).children) {
 		const dom_node & c = doc_->at(ci);
 		n += (c.type == kind::element && detail::ascii_iequals(c.name, tag));
 	}
@@ -244,8 +244,8 @@ constexpr std::string_view node::attribute(std::string_view nm) const noexcept {
 	return {};
 }
 constexpr node node::parent() const noexcept {
-	const size_t p = doc_->at(index_).parent;
-	return p == static_cast<size_t>(-1) ? node{} : node{doc_, p};
+	const std::size_t p = doc_->at(index_).parent;
+	return p == static_cast<std::size_t>(-1) ? node{} : node{doc_, p};
 }
 
 // --- selector engine
@@ -267,7 +267,7 @@ struct sel_step {
 // parse "ul > li.item#x[data-k=v] a" into steps
 constexpr std::vector<sel_step> parse_selector(std::string_view s) noexcept {
 	std::vector<sel_step> steps;
-	size_t i = 0;
+	std::size_t i = 0;
 	int pending_comb = 0; // for the next compound
 	auto skip_ws_track = [&]() {
 		bool saw = false;
@@ -290,21 +290,21 @@ constexpr std::vector<sel_step> parse_selector(std::string_view s) noexcept {
 			const char ch = s[i];
 			if (ch == '#') {
 				++i;
-				const size_t st = i;
+				const std::size_t st = i;
 				while (i < s.size() && !is_html_blank(s[i]) &&
 				       s[i] != '#' && s[i] != '.' && s[i] != '[' && s[i] != '>') { ++i; }
 				c.id = s.substr(st, i - st);
 				any = true;
 			} else if (ch == '.') {
 				++i;
-				const size_t st = i;
+				const std::size_t st = i;
 				while (i < s.size() && !is_html_blank(s[i]) &&
 				       s[i] != '#' && s[i] != '.' && s[i] != '[' && s[i] != '>') { ++i; }
 				c.classes.push_back(s.substr(st, i - st));
 				any = true;
 			} else if (ch == '[') {
 				++i;
-				const size_t st = i;
+				const std::size_t st = i;
 				while (i < s.size() && s[i] != '=' && s[i] != ']') { ++i; }
 				std::string_view an = s.substr(st, i - st);
 				std::string_view av;
@@ -314,12 +314,12 @@ constexpr std::vector<sel_step> parse_selector(std::string_view s) noexcept {
 					has_v = true;
 					if (i < s.size() && (s[i] == '"' || s[i] == '\'')) {
 						const char q = s[i++];
-						const size_t vs = i;
+						const std::size_t vs = i;
 						while (i < s.size() && s[i] != q) { ++i; }
 						av = s.substr(vs, i - vs);
 						if (i < s.size()) { ++i; }
 					} else {
-						const size_t vs = i;
+						const std::size_t vs = i;
 						while (i < s.size() && s[i] != ']') { ++i; }
 						av = s.substr(vs, i - vs);
 					}
@@ -329,7 +329,7 @@ constexpr std::vector<sel_step> parse_selector(std::string_view s) noexcept {
 				c.attr_has_value.push_back(has_v);
 				any = true;
 			} else { // tag or '*'
-				const size_t st = i;
+				const std::size_t st = i;
 				while (i < s.size() && !is_html_blank(s[i]) &&
 				       s[i] != '#' && s[i] != '.' && s[i] != '[' && s[i] != '>') { ++i; }
 				c.tag = s.substr(st, i - st);
@@ -344,7 +344,7 @@ constexpr std::vector<sel_step> parse_selector(std::string_view s) noexcept {
 	return steps;
 }
 
-constexpr bool matches_compound(const document & d, size_t idx, const sel_compound & c) noexcept {
+constexpr bool matches_compound(const document & d, std::size_t idx, const sel_compound & c) noexcept {
 	const dom_node & n = d.at(idx);
 	if (n.type != kind::element) { return false; }
 	if (!c.tag.empty() && c.tag != "*" && !ascii_iequals(n.name, c.tag)) { return false; }
@@ -353,7 +353,7 @@ constexpr bool matches_compound(const document & d, size_t idx, const sel_compou
 	for (const std::string_view cls : c.classes) {
 		if (!class_list_has(h.attribute("class"), cls)) { return false; }
 	}
-	for (size_t k = 0; k < c.attrs.size(); ++k) {
+	for (std::size_t k = 0; k < c.attrs.size(); ++k) {
 		if (!h.has_attribute(c.attrs[k].first)) { return false; }
 		if (c.attr_has_value[k] && h.attribute(c.attrs[k].first) != c.attrs[k].second) { return false; }
 	}
@@ -361,17 +361,17 @@ constexpr bool matches_compound(const document & d, size_t idx, const sel_compou
 }
 
 // does the chain steps[0..=k] match, ending at element idx?
-constexpr bool matches_chain(const document & d, size_t idx,
-                             const std::vector<sel_step> & steps, size_t k) noexcept {
+constexpr bool matches_chain(const document & d, std::size_t idx,
+                             const std::vector<sel_step> & steps, std::size_t k) noexcept {
 	if (!matches_compound(d, idx, steps[k].comp)) { return false; }
 	if (k == 0) { return true; }
 	const int comb = steps[k].combinator;
-	size_t p = d.at(idx).parent;
+	std::size_t p = d.at(idx).parent;
 	if (comb == 2) { // child: immediate parent
-		return p != static_cast<size_t>(-1) && matches_chain(d, p, steps, k - 1);
+		return p != static_cast<std::size_t>(-1) && matches_chain(d, p, steps, k - 1);
 	}
 	// descendant: any ancestor
-	while (p != static_cast<size_t>(-1)) {
+	while (p != static_cast<std::size_t>(-1)) {
 		if (matches_chain(d, p, steps, k - 1)) { return true; }
 		p = d.at(p).parent;
 	}
@@ -379,9 +379,9 @@ constexpr bool matches_chain(const document & d, size_t idx,
 }
 
 // pre-order DFS collecting matches strictly below `rootIdx`
-constexpr void query_dfs(const document & d, size_t idx, const std::vector<sel_step> & steps,
+constexpr void query_dfs(const document & d, std::size_t idx, const std::vector<sel_step> & steps,
                          std::vector<node> & out, bool stop_first, node & first) noexcept {
-	for (const size_t ci : d.at(idx).children) {
+	for (const std::size_t ci : d.at(idx).children) {
 		if (d.at(ci).type == kind::element) {
 			if (!steps.empty() && matches_chain(d, ci, steps, steps.size() - 1)) {
 				if (stop_first) {
@@ -416,7 +416,7 @@ constexpr std::vector<node> node::query_all(std::string_view selector) const noe
 }
 
 constexpr node document::get_element_by_id(std::string_view id) const noexcept {
-	for (size_t i = 0; i < nodes_.size(); ++i) {
+	for (std::size_t i = 0; i < nodes_.size(); ++i) {
 		const dom_node & n = nodes_[i];
 		if (n.type != kind::element) { continue; }
 		for (const dom_attribute & a : n.attributes) {
@@ -433,13 +433,13 @@ namespace detail {
 // character references decoded into an owned string (the value twin of
 // decode_entities; same HTML5 rules: named refs, numeric refs,
 // windows-1252 C1 remap, U+FFFD for NUL/surrogates/out-of-range)
-inline constexpr unsigned long value_win1252[32] = {
+inline constexpr char32_t value_win1252[32] = {
     0x20AC, 0x81, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
     0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x8D, 0x017D, 0x8F,
     0x90, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
     0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x9D, 0x017E, 0x0178};
 
-constexpr void value_put_utf8(std::string & o, unsigned long cp) noexcept {
+constexpr void value_put_utf8(std::string & o, char32_t cp) noexcept {
 	if (cp < 0x80) {
 		o.push_back(static_cast<char>(cp));
 	} else if (cp < 0x800) {
@@ -456,7 +456,7 @@ constexpr void value_put_utf8(std::string & o, unsigned long cp) noexcept {
 		o.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
 	}
 }
-constexpr void value_put_numeric(std::string & o, unsigned long cp) noexcept {
+constexpr void value_put_numeric(std::string & o, char32_t cp) noexcept {
 	if (cp == 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
 		cp = 0xFFFD;
 	} else if (cp >= 0x80 && cp <= 0x9F) {
@@ -465,21 +465,21 @@ constexpr void value_put_numeric(std::string & o, unsigned long cp) noexcept {
 	value_put_utf8(o, cp);
 }
 // decode raw[From..raw.size()-To) into out
-constexpr void decode_into(std::string & out, std::string_view raw, size_t from, size_t to) noexcept {
-	size_t i = from;
-	const size_t end = raw.size() - to;
+constexpr void decode_into(std::string & out, std::string_view raw, std::size_t from, std::size_t to) noexcept {
+	std::size_t i = from;
+	const std::size_t end = raw.size() - to;
 	while (i < end) {
 		const char c = raw[i];
 		if (c != '&') { out.push_back(c); ++i; continue; }
 		if (i + 1 < end && raw[i + 1] == '#') {
 			const bool hex = i + 2 < end && (raw[i + 2] == 'x' || raw[i + 2] == 'X');
-			size_t j = i + (hex ? 3 : 2);
-			unsigned long cp = 0;
-			size_t digits = 0;
+			std::size_t j = i + (hex ? 3 : 2);
+			char32_t cp = 0;
+			std::size_t digits = 0;
 			while (j < end && (hex ? is_ascii_hex(raw[j]) : is_ascii_digit(raw[j]))) {
 				if (cp <= 0x110000) {
-					cp = hex ? cp * 16 + static_cast<unsigned long>(bind_hexval(raw[j]))
-					         : cp * 10 + static_cast<unsigned long>(raw[j] - '0');
+					cp = hex ? cp * 16 + static_cast<char32_t>(bind_hexval(raw[j]))
+					         : cp * 10 + static_cast<char32_t>(raw[j] - '0');
 				}
 				++j;
 				++digits;
@@ -493,7 +493,7 @@ constexpr void decode_into(std::string & out, std::string_view raw, size_t from,
 			++i;
 			continue;
 		}
-		size_t j = i + 1;
+		std::size_t j = i + 1;
 		while (j < end && is_ascii_alnum(raw[j])) { ++j; }
 		if (j > i + 1 && j < end && raw[j] == ';') {
 			const entity_ref * e = find_entity(raw.substr(i + 1, j - i - 1));
@@ -527,9 +527,9 @@ constexpr bool is_name_start(char c) noexcept {
 constexpr bool is_tag_char(char c) noexcept {
 	return is_ascii_alnum(c) || c == ':' || c == '.' || c == '_' || c == '-';
 }
-constexpr bool ci_starts_with(std::string_view s, size_t i, std::string_view lit) noexcept {
+constexpr bool ci_starts_with(std::string_view s, std::size_t i, std::string_view lit) noexcept {
 	if (i + lit.size() > s.size()) { return false; }
-	for (size_t k = 0; k < lit.size(); ++k) {
+	for (std::size_t k = 0; k < lit.size(); ++k) {
 		if (ascii_lower(s[i + k]) != lit[k]) { return false; }
 	}
 	return true;
@@ -540,10 +540,10 @@ constexpr bool is_rcdata_tag(std::string_view t) noexcept {
 
 // find the matching close of a raw-text/RCDATA element: "</name" (ci)
 // then optional ASCII whitespace then ">". Returns npos if unclosed.
-constexpr size_t find_raw_close(std::string_view s, size_t from, std::string_view name) noexcept {
-	for (size_t i = from; i + 2 <= s.size(); ++i) {
+constexpr std::size_t find_raw_close(std::string_view s, std::size_t from, std::string_view name) noexcept {
+	for (std::size_t i = from; i + 2 <= s.size(); ++i) {
 		if (s[i] != '<' || i + 1 >= s.size() || s[i + 1] != '/') { continue; }
-		size_t k = i + 2;
+		std::size_t k = i + 2;
 		if (!ci_starts_with(s, k, name)) { continue; }
 		k += name.size();
 		// only ASCII whitespace may sit between the name and '>' - anything
@@ -559,7 +559,7 @@ constexpr size_t find_raw_close(std::string_view s, size_t from, std::string_vie
 // scan attributes starting at s[i] (i just past the tag name); collect
 // into `attrs`, advance i, set self-closing. Returns false on a lexical
 // mistake (a bare '/', an unterminated tag) or true with i past '>'.
-constexpr bool scan_attributes(std::string_view s, size_t & i, std::vector<dom_attribute> & attrs,
+constexpr bool scan_attributes(std::string_view s, std::size_t & i, std::vector<dom_attribute> & attrs,
                                bool & self_close, bool allow_self) noexcept {
 	self_close = false;
 	while (true) {
@@ -575,28 +575,28 @@ constexpr bool scan_attributes(std::string_view s, size_t & i, std::vector<dom_a
 			return false; // a stray '/' is not lexable HTML here
 		}
 		// attribute name: NAME = [^ \t\n\r\f\/>="'<]+
-		const size_t ns = i;
+		const std::size_t ns = i;
 		while (i < s.size() && !is_html_blank(s[i]) && s[i] != '/' && s[i] != '>' &&
 		       s[i] != '=' && s[i] != '"' && s[i] != '\'' && s[i] != '<') { ++i; }
 		if (i == ns) { return false; }
 		dom_attribute a;
 		a.name.reserve(i - ns);
-		for (size_t k = ns; k < i; ++k) { a.name.push_back(ascii_lower(s[k])); }
-		size_t save = i;
+		for (std::size_t k = ns; k < i; ++k) { a.name.push_back(ascii_lower(s[k])); }
+		std::size_t save = i;
 		while (save < s.size() && is_html_blank(s[save])) { ++save; }
 		if (save < s.size() && s[save] == '=') {
 			i = save + 1;
 			while (i < s.size() && is_html_blank(s[i])) { ++i; }
 			if (i < s.size() && (s[i] == '"' || s[i] == '\'')) {
 				const char q = s[i++];
-				const size_t vs = i;
+				const std::size_t vs = i;
 				while (i < s.size() && s[i] != q) { ++i; }
 				if (i >= s.size()) { return false; } // unterminated quote
 				decode_into(a.value, s.substr(vs, i - vs), 0, 0);
 				++i; // past closing quote
 			} else {
 				// UNQVAL = [^ \t\n\r\f"'=<>`]+
-				const size_t vs = i;
+				const std::size_t vs = i;
 				while (i < s.size() && !is_html_blank(s[i]) && s[i] != '"' && s[i] != '\'' &&
 				       s[i] != '=' && s[i] != '<' && s[i] != '>' && s[i] != '`') { ++i; }
 				if (i == vs) { return false; }
@@ -608,8 +608,8 @@ constexpr bool scan_attributes(std::string_view s, size_t & i, std::vector<dom_a
 }
 
 constexpr bind_error_t value_dup_attr(const std::vector<dom_attribute> & attrs) noexcept {
-	for (size_t a = 0; a < attrs.size(); ++a) {
-		for (size_t b = a + 1; b < attrs.size(); ++b) {
+	for (std::size_t a = 0; a < attrs.size(); ++a) {
+		for (std::size_t b = a + 1; b < attrs.size(); ++b) {
 			if (ascii_iequals(attrs[a].name, attrs[b].name)) {
 				return bind_error_t{bind_reason::duplicate_attribute, attrs[b].name};
 			}
@@ -621,11 +621,11 @@ constexpr bind_error_t value_dup_attr(const std::vector<dom_attribute> & attrs) 
 // tokenize the whole input; returns false on a lexical error (a stray
 // '<', an unterminated tag/comment/raw element)
 constexpr bool scan_chunks(std::string_view s, std::vector<value_chunk> & out) noexcept {
-	size_t i = 0;
-	const size_t n = s.size();
+	std::size_t i = 0;
+	const std::size_t n = s.size();
 	while (i < n) {
 		if (s[i] != '<') {
-			const size_t start = i;
+			const std::size_t start = i;
 			while (i < n && s[i] != '<') { ++i; }
 			value_chunk c;
 			c.kind = ck_text;
@@ -636,30 +636,30 @@ constexpr bool scan_chunks(std::string_view s, std::vector<value_chunk> & out) n
 		}
 		// markup
 		if (ci_starts_with(s, i, "<!--")) {
-			const size_t e = s.find("-->", i + 4);
+			const std::size_t e = s.find("-->", i + 4);
 			if (e == std::string_view::npos) { return false; }
 			i = e + 3;
 			continue;
 		}
 		if (ci_starts_with(s, i, "<!doctype")) {
-			const size_t e = s.find('>', i);
+			const std::size_t e = s.find('>', i);
 			if (e == std::string_view::npos) { return false; }
 			i = e + 1;
 			continue;
 		}
 		if (ci_starts_with(s, i, "<![cdata[")) {
-			const size_t e = s.find("]]>", i);
+			const std::size_t e = s.find("]]>", i);
 			if (e == std::string_view::npos) { return false; }
 			i = e + 3;
 			continue;
 		}
 		if (i + 1 < n && s[i + 1] == '/') { // close tag
-			size_t k = i + 2;
+			std::size_t k = i + 2;
 			if (k >= n || !is_name_start(s[k])) { return false; }
-			const size_t ns = k;
+			const std::size_t ns = k;
 			while (k < n && is_tag_char(s[k])) { ++k; }
 			std::string name;
-			for (size_t x = ns; x < k; ++x) { name.push_back(ascii_lower(s[x])); }
+			for (std::size_t x = ns; x < k; ++x) { name.push_back(ascii_lower(s[x])); }
 			while (k < n && is_html_blank(s[k])) { ++k; }
 			if (k >= n || s[k] != '>') { return false; }
 			value_chunk c;
@@ -671,21 +671,21 @@ constexpr bool scan_chunks(std::string_view s, std::vector<value_chunk> & out) n
 			continue;
 		}
 		if (i + 1 < n && is_name_start(s[i + 1])) { // open / raw-text element
-			const size_t tag_start = i + 1;
-			size_t k = tag_start;
+			const std::size_t tag_start = i + 1;
+			std::size_t k = tag_start;
 			while (k < n && is_tag_char(s[k])) { ++k; }
 			std::string name;
-			for (size_t x = tag_start; x < k; ++x) { name.push_back(ascii_lower(s[x])); }
+			for (std::size_t x = tag_start; x < k; ++x) { name.push_back(ascii_lower(s[x])); }
 			const bool raw = is_raw_text_tag(name);     // script/style
 			const bool rc = is_rcdata_tag(name);        // title/textarea
 			std::vector<dom_attribute> attrs;
 			bool self = false;
-			size_t after = k;
+			std::size_t after = k;
 			if (!scan_attributes(s, after, attrs, self, !(raw || rc))) { return false; }
 			const std::string raw_open{s.substr(i, after - i)};
 			if (raw || rc) {
 				// body up to the matching close; unclosed = lex error
-				const size_t close = find_raw_close(s, after, name);
+				const std::size_t close = find_raw_close(s, after, name);
 				if (close == std::string_view::npos) { return false; }
 				value_chunk c;
 				c.kind = ck_raw;
@@ -699,7 +699,7 @@ constexpr bool scan_chunks(std::string_view s, std::vector<value_chunk> & out) n
 				if (raw) {
 					c.text = std::string{body}; // verbatim
 				} else {                        // RCDATA: decode; textarea drops one leading NL
-					size_t drop = 0;
+					std::size_t drop = 0;
 					if (ascii_iequals(c.name, "textarea")) {
 						if (body.size() >= 2 && body[0] == '\r' && body[1] == '\n') { drop = 2; }
 						else if (!body.empty() && (body[0] == '\n' || body[0] == '\r')) { drop = 1; }
@@ -708,7 +708,7 @@ constexpr bool scan_chunks(std::string_view s, std::vector<value_chunk> & out) n
 				}
 				out.push_back(std::move(c));
 				// advance past "</name ...>"
-				size_t z = close + 2 + out.back().name.size();
+				std::size_t z = close + 2 + out.back().name.size();
 				while (z < n && is_html_blank(s[z])) { ++z; }
 				i = (z < n && s[z] == '>') ? z + 1 : close; // close always has '>'
 				continue;
@@ -798,7 +798,7 @@ constexpr bool value_validate(const std::vector<value_chunk> & cs, bind_reason &
 struct build_frame {
 	std::string name;
 	std::vector<dom_attribute> attrs;
-	std::vector<size_t> kids;
+	std::vector<std::size_t> kids;
 	std::string pending;
 	bool has_pending = false;
 	bool pre = false;
@@ -809,13 +809,13 @@ struct builder {
 	std::vector<build_frame> stack;
 	int mode = 0;
 	std::vector<dom_attribute> html_attrs;
-	size_t head_index = static_cast<size_t>(-1);
+	std::size_t head_index = static_cast<std::size_t>(-1);
 
 	constexpr explicit builder(document & d) : doc(d) {
 		stack.push_back(build_frame{"head", {}, {}, {}, false, false});
 	}
 
-	constexpr size_t new_node(dom_node && n) {
+	constexpr std::size_t new_node(dom_node && n) {
 		doc.nodes_.push_back(std::move(n));
 		return doc.nodes_.size() - 1;
 	}
@@ -832,14 +832,14 @@ struct builder {
 		f.pending.clear();
 		f.has_pending = false;
 	}
-	constexpr void append_node(build_frame & f, size_t idx) {
+	constexpr void append_node(build_frame & f, std::size_t idx) {
 		flush(f);
 		f.kids.push_back(idx);
 	}
 	constexpr void add_text(build_frame & f, std::string_view piece) {
 		if (!f.has_pending) {
 			if (f.pre && f.kids.empty() && f.name == "pre") {
-				size_t drop = 0;
+				std::size_t drop = 0;
 				if (piece.size() >= 2 && piece[0] == '\r' && piece[1] == '\n') { drop = 2; }
 				else if (!piece.empty() && (piece[0] == '\n' || piece[0] == '\r')) { drop = 1; }
 				f.pending = std::string{piece.substr(drop)};
@@ -851,7 +851,7 @@ struct builder {
 			f.pending += piece;
 		}
 	}
-	constexpr size_t finalize(build_frame & f) {
+	constexpr std::size_t finalize(build_frame & f) {
 		flush(f);
 		dom_node e;
 		e.type = kind::element;
@@ -864,7 +864,7 @@ struct builder {
 	constexpr void close_top() {
 		build_frame top = std::move(stack.back());
 		stack.pop_back();
-		const size_t idx = finalize(top);
+		const std::size_t idx = finalize(top);
 		append_node(stack.back(), idx);
 	}
 	constexpr void close_all() {
@@ -923,7 +923,7 @@ struct builder {
 			t.type = kind::text;
 			t.content = std::move(body);
 			// child index assigned after element node exists; build child first
-			const size_t ti = new_node(std::move(t));
+			const std::size_t ti = new_node(std::move(t));
 			e.children.push_back(ti);
 		}
 		append_node(stack.back(), new_node(std::move(e)));
@@ -950,7 +950,7 @@ struct builder {
 	constexpr void finish() {
 		close_all();
 		to_body(); // ensures head_index set + an (empty) body frame present
-		const size_t body_index = finalize(stack.back());
+		const std::size_t body_index = finalize(stack.back());
 		dom_node html;
 		html.type = kind::element;
 		html.name = "html";
@@ -976,8 +976,8 @@ constexpr void build_document(document & doc, const std::vector<value_chunk> & c
 	}
 	b.finish();
 	// parent links + cached <title>
-	for (size_t i = 0; i < doc.nodes_.size(); ++i) {
-		for (const size_t ci : doc.nodes_[i].children) { doc.nodes_[ci].parent = i; }
+	for (std::size_t i = 0; i < doc.nodes_.size(); ++i) {
+		for (const std::size_t ci : doc.nodes_[i].children) { doc.nodes_[ci].parent = i; }
 	}
 }
 
@@ -1020,7 +1020,7 @@ constexpr void append_escaped(std::string & out, std::string_view s, bool in_att
 		}
 	}
 }
-constexpr void serialize_node(std::string & out, const document & d, size_t idx) noexcept {
+constexpr void serialize_node(std::string & out, const document & d, std::size_t idx) noexcept {
 	const dom_node & n = d.at(idx);
 	if (n.type == kind::text) { append_escaped(out, n.content, false); return; }
 	out.push_back('<');
@@ -1040,7 +1040,7 @@ constexpr void serialize_node(std::string & out, const document & d, size_t idx)
 		if (!is_void_tag(n.name)) { out += "</"; out += n.name; out.push_back('>'); }
 		return;
 	}
-	for (const size_t ci : n.children) {
+	for (const std::size_t ci : n.children) {
 		if (raw && d.at(ci).type == kind::text) { out += d.at(ci).content; }
 		else { serialize_node(out, d, ci); }
 	}
